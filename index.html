@@ -501,10 +501,10 @@ npm run start:dev</pre>
 
 <script>
   // ---------------------------------------------------------------
-  // URL del backend (NestJS). Cámbiala aquí al desplegar en Render,
-  // o pásala en la dirección: index.html?api=https://tu-api.onrender.com
+  // URL del backend (NestJS). Por defecto, el desplegado en Render.
+  // Para usar el backend local: index.html?api=http://localhost:3000
   // ---------------------------------------------------------------
-  const API_POR_DEFECTO = 'http://localhost:3000';
+  const API_POR_DEFECTO = 'https://uzdi-backend-api.onrender.com';
   const API = (new URLSearchParams(location.search).get('api') || API_POR_DEFECTO).replace(/\/+$/, '');
   document.querySelectorAll('[data-api]').forEach((a) => { a.href = API + a.dataset.api; });
 
@@ -538,6 +538,17 @@ npm run start:dev</pre>
     'Estructura Institucional - Provincias': 'geo', 'Estructura Institucional - Cantones': 'geo', 'Estructura Institucional - Sedes UZDI': 'geo',
     'Reportes': 'rep',
   };
+
+  // Si el Swagger usa otros nombres de sección, se agrupa por el primer tramo de la ruta
+  const RUTA_A_MODULO = {
+    '': 'seg', auth: 'seg', users: 'seg', persona: 'seg', perfil: 'seg', accion: 'seg', permiso: 'seg', sesion: 'seg', historial: 'seg',
+    adolescente: 'ado', nacionalidad: 'ado', 'estado-civil': 'ado', etnia: 'ado', gdo: 'ado',
+    expediente: 'jud', 'medida-expediente': 'jud', infraccion: 'jud', 'medida-socioeducativa': 'jud',
+    representante: 'fam', 'tipo-parentesco': 'fam', 'adolescente-representante': 'fam',
+    taller: 'tal', 'asistencia-taller': 'tal', 'tipo-documento': 'doc', 'documento-expediente': 'doc',
+    provincia: 'geo', canton: 'geo', uzdi: 'geo', reportes: 'rep',
+  };
+  const moduloPorRuta = (ruta) => RUTA_A_MODULO[ruta.replace(/^\/api\/v1\/?/, '').split('/')[0]];
 
   // Matriz RBAC inicial (db/02_seguridad_rbac.sql): acciones habilitadas de 108
   const PERFILES = [
@@ -622,7 +633,7 @@ npm run start:dev</pre>
       const vivos = [];
       for (const [ruta, ops] of Object.entries(doc.paths || {})) {
         for (const [m, op] of Object.entries(ops)) {
-          const mod = TAG_A_MODULO[(op.tags || [])[0]];
+          const mod = TAG_A_MODULO[(op.tags || [])[0]] || moduloPorRuta(ruta);
           if (mod) vivos.push([m.toUpperCase(), ruta.replace(/^\/api\/v1/, ''), mod, op.summary || '']);
         }
       }

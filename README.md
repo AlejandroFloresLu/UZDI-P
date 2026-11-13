@@ -24,10 +24,13 @@ python -m http.server 5500
 ## Conectar con el backend
 
 La landing consulta `/api/v1` y `/api/docs-json` y enlaza a Swagger. Por defecto usa
-`http://localhost:3000`. Para apuntar a otro backend:
+el backend desplegado en Render: `https://uzdi-backend-api.onrender.com`.
 
-- Cambia `API_POR_DEFECTO` al inicio del `<script>` en `index.html`, o
-- Pasa la URL en la dirección: `index.html?api=https://tu-api.onrender.com`
+- Para usar el backend local: `index.html?api=http://localhost:3000`
+- Para cambiar el valor por defecto: `API_POR_DEFECTO` al inicio del `<script>` en `index.html`.
+
+El plan gratuito de Render apaga el servicio tras 15 minutos sin uso; la primera
+visita puede tardar ~50 s en mostrar "API en línea".
 
 ## Publicarla
 
