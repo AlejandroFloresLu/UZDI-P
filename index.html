@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UZDI · Sistema de Gestión Integral</title>
+<meta name="description" content="Sistema de gestión de medidas socioeducativas de las Unidades Zonales de Desarrollo Integral (UZDI). Proyecto académico PUCE.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M4 4h10v20a6 6 0 0 0 12 0V4h10v20a16 16 0 0 1-32 0z' fill='%231946C8'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --tinta: #211C1C;        /* texto y pie de página */
+    --gris: #6B6464;         /* texto secundario */
+    --linea: #EEEDED;        /* reglas y retícula */
+    --papel: #FFFFFF;
+    --humo: #F6F6F6;         /* buscador y fondos suaves */
+    --azul: #1946C8;         /* bloques institucionales */
+    --azul-accion: #1C86F2;  /* botones y enlaces */
+    --cielo: #E4F0FD;        /* etiquetas */
+    --ok: #22A06B;
+    --ancho: 1240px;
+    --radio: 999px;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--papel); color: var(--tinta);
+    font-family: 'Archivo', system-ui, sans-serif; font-stretch: 100%;
+    font-size: 1rem; line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+  img, svg { display: block; }
+  :focus-visible { outline: 3px solid var(--azul-accion); outline-offset: 3px; border-radius: 6px; }
+  .contenedor { max-width: var(--ancho); margin: 0 auto; padding: 0 24px; }
+  .titular {
+    font-stretch: 125%; font-weight: 850; text-transform: uppercase;
+    line-height: 1.02; letter-spacing: -0.01em; margin: 0;
+  }
+  h2.titular { font-size: clamp(1.75rem, 3.6vw, 2.75rem); }
+  .boton {
+    display: inline-flex; align-items: center; gap: 8px; border-radius: var(--radio);
+    padding: 12px 22px; font: inherit; font-size: .875rem; font-weight: 600;
+    text-decoration: none; cursor: pointer; border: 1.5px solid transparent;
+    transition: background-color .15s, color .15s;
+  }
+  .boton-lleno { background: var(--azul-accion); color: #fff; }
+  .boton-lleno:hover { background: #0F6FD6; }
+  .boton-contorno { border-color: var(--azul-accion); color: var(--azul-accion); background: transparent; }
+  .boton-contorno:hover { background: var(--cielo); }
+  .boton-claro { border-color: rgba(255,255,255,.7); color: #fff; }
+  .boton-claro:hover { background: rgba(255,255,255,.12); }
+
+  /* ---------- Navegación ---------- */
+  .nav { position: sticky; top: 0; z-index: 10; background: rgba(255,255,255,.94); backdrop-filter: blur(8px); }
+  .nav .contenedor { display: flex; align-items: center; justify-content: space-between; height: 76px; gap: 24px; }
+  .marca { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .marca span { font-stretch: 125%; font-weight: 850; font-size: 1.25rem; letter-spacing: .02em; }
+  .nav ul { display: flex; gap: 40px; list-style: none; margin: 0; padding: 0; font-size: .9375rem; }
+  .nav ul a { text-decoration: none; color: var(--tinta); }
+  .nav ul a:hover { color: var(--azul-accion); }
+  .estado { display: inline-flex; align-items: center; gap: 8px; font-size: .8125rem; color: var(--gris); }
+  .estado i { width: 8px; height: 8px; border-radius: 50%; background: #C9C4C4; }
+  .estado.en-linea i { background: var(--ok); box-shadow: 0 0 0 4px rgba(34,160,107,.15); }
+  .nav-derecha { display: flex; align-items: center; gap: 20px; }
+
+  /* ---------- Portada ---------- */
+  .portada { position: relative; padding: 88px 0 96px; text-align: center; overflow: hidden; }
+  .reticula {
+    position: absolute; inset: 0; pointer-events: none;
+    max-width: var(--ancho); margin: 0 auto; left: 24px; right: 24px;
+    background-image: linear-gradient(to right, var(--linea) 1px, transparent 1px);
+    background-size: calc(100% / 8) 100%;
+    border-right: 1px solid var(--linea);
+  }
+  .portada > .contenedor { position: relative; }
+  .portada h1 { font-size: clamp(2.25rem, 6.4vw, 5rem); max-width: 15ch; margin: 0 auto; text-wrap: balance; }
+  .portada p.bajada { font-size: clamp(1.0625rem, 1.6vw, 1.25rem); color: var(--gris); max-width: 52ch; margin: 24px auto 40px; }
+  .buscador {
+    display: flex; align-items: center; max-width: 620px; margin: 0 auto;
+    background: var(--humo); border-radius: var(--radio); padding: 6px 6px 6px 28px;
+  }
+  .buscador input {
+    flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: .9375rem;
+    color: var(--tinta); padding: 12px 0;
+  }
+  .buscador input:focus { outline: none; }
+  .buscador:focus-within { box-shadow: 0 0 0 3px var(--cielo); }
+  .buscador button {
+    width: 48px; height: 48px; border-radius: 50%; border: 0; cursor: pointer;
+    background: var(--azul-accion); color: #fff; display: grid; place-items: center; flex: none;
+  }
+  .sugerencias { margin-top: 24px; font-size: .8125rem; color: var(--gris); }
+  .etiquetas { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 12px; }
+  .etiqueta {
+    border: 0; background: var(--cielo); color: var(--tinta); border-radius: var(--radio);
+    padding: 8px 16px; font: inherit; font-size: .8125rem; cursor: pointer;
+  }
+  .etiqueta:hover, .etiqueta[aria-pressed="true"] { background: var(--azul-accion); color: #fff; }
+
+  /* ---------- Sedes ---------- */
+  .seccion { padding: 96px 0; }
+  .encabezado { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 40px; flex-wrap: wrap; }
+  .encabezado p { color: var(--gris); margin: 12px 0 0; max-width: 60ch; }
+  .rejilla { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px 24px; }
+  .sede-media {
+    container-type: inline-size;
+    position: relative; aspect-ratio: 4 / 3; border-radius: 4px; overflow: hidden;
+    background: var(--azul); color: #fff; display: flex; align-items: flex-end; padding: 20px;
+  }
+  .sede:nth-child(3n+2) .sede-media { background: var(--tinta); }
+  .sede:nth-child(3n) .sede-media { background: var(--cielo); color: var(--azul); }
+  .sede-media .ciudad {
+    font-stretch: 125%; font-weight: 900; text-transform: uppercase; font-size: min(2.75rem, 10.5cqi);
+    line-height: .95; letter-spacing: -.01em; white-space: nowrap;
+  }
+  .sede-media .zona {
+    position: absolute; top: 16px; left: 16px; background: #fff; color: var(--tinta);
+    font-size: .75rem; font-weight: 600; padding: 6px 12px; border-radius: var(--radio);
+  }
+  .sede h3 { font-size: 1.0625rem; font-weight: 700; margin: 18px 0 2px; }
+  .sede .lugar { font-size: .875rem; color: var(--gris); margin: 0; }
+  .sede .direccion { font-size: .875rem; margin: 12px 0 0; padding-top: 12px; border-top: 1px solid var(--linea); }
+  .vacio { grid-column: 1 / -1; text-align: center; padding: 48px 24px; background: var(--humo); border-radius: 4px; }
+  .vacio p { margin: 0 0 16px; }
+  .aviso-demo { font-size: .8125rem; color: var(--gris); margin-top: 32px; }
+
+  /* ---------- Qué es una UZDI ---------- */
+  .quienes { position: relative; display: grid; grid-template-columns: 1fr; }
+  .quienes-media {
+    background: var(--cielo); border-radius: 4px; min-height: 440px; margin-right: 22%;
+    padding: 48px; display: flex; align-items: flex-start;
+  }
+  .quienes-media blockquote {
+    margin: 0; font-stretch: 125%; font-weight: 850; text-transform: uppercase; color: var(--azul);
+    font-size: clamp(2rem, 4.6vw, 3.75rem); line-height: 1; max-width: 12ch;
+  }
+  .quienes-panel {
+    position: absolute; right: 0; bottom: -40px; width: min(520px, 52%);
+    background: var(--azul); color: #fff; padding: 48px; border-radius: 4px;
+  }
+  .quienes-panel h2 { font-size: clamp(1.75rem, 3vw, 2.5rem); }
+  .quienes-panel p { margin: 16px 0 28px; color: rgba(255,255,255,.88); }
+
+  .cifras { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 112px; border-top: 1px solid var(--linea); border-bottom: 1px solid var(--linea); }
+  .cifra { text-align: center; padding: 36px 12px; }
+  .cifra + .cifra { border-left: 1px solid var(--linea); }
+  .cifra b { display: block; font-stretch: 125%; font-weight: 850; font-size: clamp(2.25rem, 4vw, 3.25rem); line-height: 1; }
+  .cifra span { display: block; margin-top: 10px; font-size: .875rem; color: var(--gris); }
+
+  /* ---------- Medidas ---------- */
+  .filtros { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 32px; }
+  .medidas { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0; border-top: 1px solid var(--linea); }
+  .medida { padding: 28px 24px 28px 0; border-bottom: 1px solid var(--linea); display: grid; gap: 8px; }
+  .medida h3 { margin: 0; font-size: 1.0625rem; font-weight: 700; line-height: 1.3; }
+  .medida p { margin: 0; font-size: .9375rem; color: var(--gris); }
+  .tipo { justify-self: start; font-size: .75rem; font-weight: 600; padding: 4px 12px; border-radius: var(--radio); background: var(--cielo); color: var(--azul); }
+  .tipo.privativa { background: var(--tinta); color: #fff; }
+
+  /* ---------- Cómo funciona ---------- */
+  .ruta { background: var(--azul); color: #fff; }
+  .ruta .encabezado p { color: rgba(255,255,255,.82); }
+  .pasos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; counter-reset: paso; }
+  .paso { counter-increment: paso; border-top: 2px solid rgba(255,255,255,.35); padding-top: 24px; }
+  .paso::before { content: counter(paso); display: block; font-stretch: 125%; font-weight: 850; font-size: 3rem; line-height: 1; margin-bottom: 20px; }
+  .paso h3 { margin: 0 0 8px; font-size: 1.125rem; }
+  .paso p { margin: 0; font-size: .9375rem; color: rgba(255,255,255,.85); }
+  .paso code { font-size: .8125rem; background: rgba(255,255,255,.14); padding: 2px 6px; border-radius: 4px; }
+
+  /* ---------- Recursos ---------- */
+  .recursos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+  .recurso { display: flex; flex-direction: column; text-decoration: none; border-top: 2px solid var(--tinta); padding-top: 20px; }
+  .recurso h3 { margin: 0 0 8px; font-size: 1.125rem; }
+  .recurso p { margin: 0 0 20px; color: var(--gris); font-size: .9375rem; flex: 1; }
+  .recurso span { color: var(--azul-accion); font-weight: 600; font-size: .875rem; }
+  .recurso:hover h3 { color: var(--azul-accion); }
+
+  /* ---------- Cobertura ---------- */
+  .cobertura { background: var(--azul); color: #fff; padding: 96px 0; }
+  .cobertura .contenedor { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; }
+  .cobertura p { color: rgba(255,255,255,.85); max-width: 44ch; }
+  .provincias { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 40px; }
+  .provincias li { padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.22); break-inside: avoid; display: flex; justify-content: space-between; gap: 12px; }
+  .provincias small { color: rgba(255,255,255,.7); }
+
+  /* ---------- Pie ---------- */
+  footer { background: var(--tinta); color: #fff; padding: 72px 0 32px; }
+  .pie { display: grid; grid-template-columns: 1.1fr .8fr .8fr 1.4fr; gap: 40px; }
+  .pie h4 { margin: 0 0 16px; font-size: .9375rem; }
+  .pie ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; font-size: .875rem; }
+  .pie ul a { text-decoration: none; color: rgba(255,255,255,.75); }
+  .pie ul a:hover { color: #fff; }
+  .pie .acceso p { font-size: 1.125rem; margin: 0 0 20px; max-width: 30ch; }
+  .legal { margin-top: 64px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,.14); font-size: .8125rem; color: rgba(255,255,255,.6); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 1024px) {
+    .nav ul { display: none; }
+    .rejilla { grid-template-columns: repeat(2, 1fr); }
+    .pasos, .recursos { grid-template-columns: repeat(2, 1fr); }
+    .pie { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 720px) {
+    .nav .estado { display: none; }
+    .portada { padding: 56px 0 64px; }
+    .rejilla, .pasos, .recursos { grid-template-columns: 1fr; }
+    .quienes-media { margin-right: 0; min-height: 280px; padding: 32px; }
+    .quienes-panel { position: static; width: auto; margin-top: -32px; margin-left: 16px; padding: 32px; }
+    .cifras { grid-template-columns: repeat(2, 1fr); margin-top: 64px; }
+    .cifra:nth-child(3) { border-left: 0; }
+    .cifra:nth-child(n+3) { border-top: 1px solid var(--linea); }
+    .cobertura .contenedor { grid-template-columns: 1fr; gap: 32px; }
+    .provincias { columns: 1; }
+    .pie { grid-template-columns: 1fr; }
+    .seccion, .cobertura { padding: 64px 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="contenedor">
+    <a class="marca" href="#" aria-label="UZDI, inicio">
+      <svg width="34" height="34" viewBox="0 0 40 40" aria-hidden="true"><path d="M4 4h10v20a6 6 0 0 0 12 0V4h10v20a16 16 0 0 1-32 0z" fill="#211C1C"/></svg>
+      <span>UZDI</span>
+    </a>
+    <nav aria-label="Principal">
+      <ul>
+        <li><a href="#sedes">Sedes</a></li>
+        <li><a href="#medidas">Medidas</a></li>
+        <li><a href="#como-funciona">Cómo funciona</a></li>
+        <li><a href="#recursos">Documentación</a></li>
+      </ul>
+    </nav>
+    <div class="nav-derecha">
+      <span class="estado" id="estado" role="status"><i></i><span>Comprobando API…</span></span>
+      <a class="boton boton-lleno" href="#" data-api="/api/docs">Ingresar al sistema</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="portada">
+    <div class="reticula" aria-hidden="true"></div>
+    <div class="contenedor">
+      <h1 class="titular">Cada medida, un camino de vuelta</h1>
+      <p class="bajada">Gestión integral de las medidas socioeducativas que acompañan las Unidades Zonales de Desarrollo Integral: expedientes, familias, talleres y seguimiento en un solo lugar.</p>
+      <form class="buscador" role="search" id="buscador">
+        <label for="q" class="sr" style="position:absolute;left:-9999px">Buscar una sede por ciudad, provincia o zona</label>
+        <input id="q" name="q" type="search" placeholder="Busca por ciudad, provincia o zona" autocomplete="off">
+        <button type="submit" aria-label="Buscar sedes">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        </button>
+      </form>
+      <p class="sugerencias">Ciudades con sede</p>
+      <div class="etiquetas" id="atajos">
+        <button class="etiqueta" type="button">Quito</button>
+        <button class="etiqueta" type="button">Guayaquil</button>
+        <button class="etiqueta" type="button">Cuenca</button>
+        <button class="etiqueta" type="button">Ambato</button>
+        <button class="etiqueta" type="button">Portoviejo</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="seccion" id="sedes" aria-labelledby="titulo-sedes">
+    <div class="contenedor">
+      <div class="encabezado">
+        <div>
+          <h2 class="titular" id="titulo-sedes">Sedes en territorio</h2>
+          <p id="resumen-sedes">Seis unidades zonales registradas en el sistema.</p>
+        </div>
+        <a class="boton boton-contorno" href="#" data-api="/api/docs#/Estructura%20Institucional%20-%20Sedes%20UZDI">Ver en la API</a>
+      </div>
+      <div class="rejilla" id="rejilla-sedes" aria-live="polite"></div>
+      <p class="aviso-demo">Las sedes y direcciones corresponden a los datos de demostración del sistema.</p>
+    </div>
+  </section>
+
+  <section class="seccion" aria-labelledby="titulo-quienes" style="padding-top:0">
+    <div class="contenedor">
+      <div class="quienes">
+        <div class="quienes-media">
+          <blockquote>Acompañar también es justicia</blockquote>
+        </div>
+        <div class="quienes-panel">
+          <h2 class="titular" id="titulo-quienes">Qué es una UZDI</h2>
+          <p>Las Unidades Zonales de Desarrollo Integral dan seguimiento a adolescentes que cumplen medidas socioeducativas no privativas de libertad, junto con sus familias, con equipos de trabajo social, psicología, educación y asesoría legal.</p>
+          <a class="boton boton-claro" href="#medidas">Conocer las medidas</a>
+        </div>
+      </div>
+
+      <div class="cifras">
+        <div class="cifra"><b>6</b><span>Sedes registradas</span></div>
+        <div class="cifra"><b>12</b><span>Provincias</span></div>
+        <div class="cifra"><b>7</b><span>Medidas socioeducativas</span></div>
+        <div class="cifra"><b>8</b><span>Perfiles profesionales</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="seccion" id="medidas" aria-labelledby="titulo-medidas" style="padding-top:24px">
+    <div class="contenedor">
+      <div class="encabezado">
+        <div>
+          <h2 class="titular" id="titulo-medidas">Medidas socioeducativas</h2>
+          <p>Las que dicta la autoridad judicial según el Código de la Niñez y Adolescencia. Un expediente puede tener varias, sucesivas o simultáneas.</p>
+        </div>
+      </div>
+      <div class="filtros" role="group" aria-label="Filtrar medidas">
+        <button class="etiqueta" type="button" data-filtro="todas" aria-pressed="true">Todas</button>
+        <button class="etiqueta" type="button" data-filtro="no-privativa" aria-pressed="false">No privativas de libertad</button>
+        <button class="etiqueta" type="button" data-filtro="privativa" aria-pressed="false">Privativas de libertad</button>
+      </div>
+      <div class="medidas" id="medidas-lista"></div>
+    </div>
+  </section>
+
+  <section class="seccion ruta" id="como-funciona" aria-labelledby="titulo-ruta">
+    <div class="contenedor">
+      <div class="encabezado">
+        <div>
+          <h2 class="titular" id="titulo-ruta">Cómo se acompaña un caso</h2>
+          <p>El recorrido que registra el sistema, desde el ingreso hasta el cierre de la medida.</p>
+        </div>
+      </div>
+      <ol class="pasos">
+        <li class="paso"><h3>Ingreso</h3><p>Se registra al adolescente con cédula o pasaporte, su cantón y su contexto. <code>/adolescente</code></p></li>
+        <li class="paso"><h3>Expediente</h3><p>Se abre la causa judicial y se asignan las medidas en el orden que dictó el juez. <code>/expediente</code></p></li>
+        <li class="paso"><h3>Acompañamiento</h3><p>Se vincula a la familia y se registra la asistencia a talleres de adolescentes y representantes. <code>/taller</code></p></li>
+        <li class="paso"><h3>Seguimiento</h3><p>Se suman documentos habilitantes, se generan reportes y cada cambio queda auditado. <code>/reportes</code></p></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="seccion" id="recursos" aria-labelledby="titulo-recursos">
+    <div class="contenedor">
+      <div class="encabezado">
+        <div>
+          <h2 class="titular" id="titulo-recursos">Documentación del proyecto</h2>
+          <p>Todo lo necesario para usar, integrar y desplegar el sistema.</p>
+        </div>
+        <a class="boton boton-contorno" href="https://github.com/alex171215/uzdi-backend-p8">Ver repositorio</a>
+      </div>
+      <div class="recursos">
+        <a class="recurso" href="https://github.com/alex171215/uzdi-backend-p8/blob/main/docs/MANUAL_DE_USUARIO_FINAL_SISTEMA_UZDI.md"><h3>Manual de usuario</h3><p>Cómo operar el sistema según cada perfil profesional.</p><span>Leer manual</span></a>
+        <a class="recurso" href="https://github.com/alex171215/uzdi-backend-p8/blob/main/docs/CATALOGO_DE_ESPECIFICACION_API_FRONTEND.md"><h3>Catálogo de la API</h3><p>Rutas, cuerpos de petición y respuestas para el frontend.</p><span>Ver catálogo</span></a>
+        <a class="recurso" href="https://github.com/alex171215/uzdi-backend-p8/blob/main/docs/DIAGRAMA_ENTIDAD_RELACION_OFICIAL_DER.md"><h3>Modelo de datos</h3><p>Diagrama entidad-relación con el recuadro de seguridad ER CAI.</p><span>Ver diagrama</span></a>
+        <a class="recurso" href="https://github.com/alex171215/uzdi-backend-p8/blob/main/docs/GUIA_DESPLIEGUE_LINUX.md"><h3>Guía de despliegue</h3><p>Instalación en servidores Linux con Docker o de forma nativa.</p><span>Leer guía</span></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="cobertura" aria-labelledby="titulo-cobertura">
+    <div class="contenedor">
+      <div>
+        <h2 class="titular" id="titulo-cobertura">Cobertura en doce provincias</h2>
+        <p>El catálogo geográfico del sistema permite filtrar cantones por provincia y sedes por cantón, para asignar cada caso a la unidad que le corresponde.</p>
+      </div>
+      <ul class="provincias" id="provincias"></ul>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="contenedor">
+    <div class="pie">
+      <div>
+        <a class="marca" href="#" aria-label="UZDI, inicio">
+          <svg width="34" height="34" viewBox="0 0 40 40" aria-hidden="true"><path d="M4 4h10v20a6 6 0 0 0 12 0V4h10v20a16 16 0 0 1-32 0z" fill="#fff"/></svg>
+          <span>UZDI</span>
+        </a>
+      </div>
+      <div>
+        <h4>Sistema</h4>
+        <ul>
+          <li><a href="#" data-api="/api/docs">Documentación interactiva</a></li>
+          <li><a href="#" data-api="/api/v1">Estado de la API</a></li>
+          <li><a href="#medidas">Medidas</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Proyecto</h4>
+        <ul>
+          <li><a href="https://github.com/alex171215/uzdi-backend-p8">Repositorio</a></li>
+          <li><a href="#recursos">Documentación</a></li>
+          <li><a href="#como-funciona">Cómo funciona</a></li>
+        </ul>
+      </div>
+      <div class="acceso">
+        <p>¿Formas parte del equipo técnico? Ingresa con tu usuario y perfil institucional.</p>
+        <a class="boton boton-lleno" href="#" data-api="/api/docs">Ingresar al sistema</a>
+      </div>
+    </div>
+    <div class="legal">
+      <span>Proyecto académico PUCE · Ecología Integral 2026</span>
+      <span>Sitio de demostración. No es un sitio oficial del SNAI.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // ---------------------------------------------------------------
+  // URL del backend (NestJS). Cámbiala aquí al desplegar en Render,
+  // o pásala en la dirección: index.html?api=https://tu-api.onrender.com
+  // ---------------------------------------------------------------
+  const API_POR_DEFECTO = 'http://localhost:3000';
+  const API = (new URLSearchParams(location.search).get('api') || API_POR_DEFECTO).replace(/\/+$/, '');
+  document.querySelectorAll('[data-api]').forEach((a) => { a.href = API + a.dataset.api; });
+
+  // Datos de demostración del sistema (db/03_datos_iniciales_catalogos.sql)
+  const SEDES = [
+    { nombre: 'UZDI Pichincha - Centro Norte', ciudad: 'Quito', provincia: 'Pichincha', zona: 'Zona 9 - DMQ', direccion: 'Av. 10 de Agosto N25-32 y Colón' },
+    { nombre: 'UZDI Pichincha - Sur', ciudad: 'Quito', provincia: 'Pichincha', zona: 'Zona 9 - DMQ', direccion: 'Av. Rodrigo de Chávez y 5 de Junio' },
+    { nombre: 'UZDI Guayas - Guayaquil Centro', ciudad: 'Guayaquil', provincia: 'Guayas', zona: 'Zona 8', direccion: 'Av. 9 de Octubre y Pedro Carbo' },
+    { nombre: 'UZDI Azuay - Cuenca', ciudad: 'Cuenca', provincia: 'Azuay', zona: 'Zona 6', direccion: 'Calle Larga y Benigno Malo' },
+    { nombre: 'UZDI Tungurahua - Ambato', ciudad: 'Ambato', provincia: 'Tungurahua', zona: 'Zona 3', direccion: 'Calle Bolívar y Castillo' },
+    { nombre: 'UZDI Manabí - Portoviejo', ciudad: 'Portoviejo', provincia: 'Manabí', zona: 'Zona 4', direccion: 'Calle Rocafuerte y 10 de Agosto' },
+  ];
+  const MEDIDAS = [
+    { nombre: 'Amonestación e imposición de reglas de conducta', tipo: 'no-privativa', meses: 6, texto: 'Llamado de atención del juez y pautas de comportamiento que el adolescente debe cumplir.' },
+    { nombre: 'Orientación y apoyo familiar', tipo: 'no-privativa', meses: 6, texto: 'Acompañamiento psicosocial al adolescente y a su familia para fortalecer el entorno.' },
+    { nombre: 'Servicio a la comunidad', tipo: 'no-privativa', meses: 6, texto: 'Actividades en beneficio de la comunidad, compatibles con sus estudios y su edad.' },
+    { nombre: 'Libertad asistida', tipo: 'no-privativa', meses: 12, texto: 'El adolescente sigue en su medio con seguimiento periódico del equipo técnico.' },
+    { nombre: 'Reparación del daño causado a la víctima', tipo: 'no-privativa', meses: 3, texto: 'Restitución o compensación acordada a favor de la persona afectada.' },
+    { nombre: 'Permanencia durante los fines de semana en un centro', tipo: 'privativa', meses: 6, texto: 'Internamiento de fin de semana; entre semana continúa sus estudios y su vida familiar.' },
+    { nombre: 'Privación de libertad en centro de adolescentes infractores', tipo: 'privativa', meses: 24, texto: 'Internamiento institucional en un CAI, la medida de último recurso.' },
+  ];
+  const PROVINCIAS = [
+    // [provincia, cantones registrados]
+    ['Pichincha', 4], ['Guayas', 4], ['Azuay', 2], ['Tungurahua', 2], ['Manabí', 2], ['Chimborazo', 1],
+    ['El Oro', 1], ['Imbabura', 2], ['Loja', 1], ['Cotopaxi', 1], ['Esmeraldas', 1], ['Santo Domingo de los Tsáchilas', 1],
+  ];
+
+  const normalizar = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  const rejilla = document.getElementById('rejilla-sedes');
+  const resumen = document.getElementById('resumen-sedes');
+  const input = document.getElementById('q');
+  const atajos = [...document.querySelectorAll('#atajos .etiqueta')];
+
+  function pintarSedes(filtro = '') {
+    const f = normalizar(filtro.trim());
+    const lista = SEDES.filter((s) => !f || normalizar(`${s.nombre} ${s.ciudad} ${s.provincia} ${s.zona}`).includes(f));
+    resumen.textContent = f
+      ? `${lista.length} ${lista.length === 1 ? 'sede coincide' : 'sedes coinciden'} con “${filtro.trim()}”.`
+      : 'Seis unidades zonales registradas en el sistema.';
+    if (!lista.length) {
+      rejilla.innerHTML = `<div class="vacio"><p>No hay una sede registrada para “${esc(filtro.trim())}”. Prueba con otra ciudad o provincia.</p><button class="boton boton-contorno" type="button" id="limpiar">Ver todas las sedes</button></div>`;
+      document.getElementById('limpiar').onclick = () => { input.value = ''; marcarAtajo(''); pintarSedes(); input.focus(); };
+      return;
+    }
+    rejilla.innerHTML = lista.map((s) => `
+      <article class="sede">
+        <div class="sede-media"><span class="zona">${esc(s.zona)}</span><span class="ciudad" aria-hidden="true">${esc(s.ciudad)}</span></div>
+        <h3>${esc(s.nombre)}</h3>
+        <p class="lugar">${esc(s.ciudad)}, ${esc(s.provincia)}</p>
+        <p class="direccion">${esc(s.direccion)}</p>
+      </article>`).join('');
+  }
+
+  function marcarAtajo(valor) {
+    atajos.forEach((b) => b.setAttribute('aria-pressed', String(b.textContent === valor)));
+  }
+
+  document.getElementById('buscador').addEventListener('submit', (e) => {
+    e.preventDefault();
+    marcarAtajo(input.value.trim());
+    pintarSedes(input.value);
+    document.getElementById('sedes').scrollIntoView();
+  });
+  input.addEventListener('input', () => { marcarAtajo(input.value.trim()); pintarSedes(input.value); });
+  atajos.forEach((b) => b.addEventListener('click', () => {
+    input.value = b.textContent; marcarAtajo(b.textContent); pintarSedes(b.textContent);
+    document.getElementById('sedes').scrollIntoView();
+  }));
+
+  const listaMedidas = document.getElementById('medidas-lista');
+  const filtros = [...document.querySelectorAll('[data-filtro]')];
+  function pintarMedidas(tipo) {
+    listaMedidas.innerHTML = MEDIDAS.filter((m) => tipo === 'todas' || m.tipo === tipo).map((m) => `
+      <div class="medida">
+        <span class="tipo ${m.tipo === 'privativa' ? 'privativa' : ''}">${m.tipo === 'privativa' ? 'Privativa' : 'No privativa'}</span>
+        <h3>${esc(m.nombre)}</h3>
+        <p>${esc(m.texto)}</p>
+        <p>Duración referencial: ${m.meses} ${m.meses === 1 ? 'mes' : 'meses'}</p>
+      </div>`).join('');
+  }
+  filtros.forEach((b) => b.addEventListener('click', () => {
+    filtros.forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    pintarMedidas(b.dataset.filtro);
+  }));
+
+  document.getElementById('provincias').innerHTML = PROVINCIAS.map(([p, n]) =>
+    `<li><span>${esc(p)}</span><small>${n} ${n === 1 ? 'cantón' : 'cantones'}</small></li>`).join('');
+
+  pintarSedes();
+  pintarMedidas('todas');
+
+  // Estado real de la API
+  const estado = document.getElementById('estado');
+  fetch(API + '/api/v1', { headers: { Accept: 'application/json' } })
+    .then((r) => r.ok ? r.json() : Promise.reject())
+    .then((d) => { if (!d.ok) throw 0; estado.classList.add('en-linea'); estado.lastElementChild.textContent = 'API en línea'; })
+    .catch(() => { estado.lastElementChild.textContent = 'API sin conexión'; });
+</script>
+</body>
+</html>
