@@ -1,7 +1,13 @@
 # UZDI · Landing page
 
-Página de inicio pública del Sistema de Gestión Integral UZDI (proyecto académico PUCE).
-Es un sitio estático: un solo `index.html`, sin dependencias ni build.
+Landing de presentación del **backend** del Sistema de Gestión Integral UZDI
+(proyecto académico PUCE): módulos, explorador de endpoints, arquitectura,
+seguridad RBAC, stack y equipo. Es un sitio estático: un solo `index.html`,
+sin dependencias ni build.
+
+Con el backend encendido, la página lee **en vivo** su Swagger (`/api/docs-json`)
+para listar los endpoints y muestra si la API está en línea. Si el backend no
+responde, usa una copia incluida en la página.
 
 Backend: [alex171215/uzdi-backend-p8](https://github.com/alex171215/uzdi-backend-p8)
 
@@ -17,7 +23,7 @@ python -m http.server 5500
 
 ## Conectar con el backend
 
-La landing muestra si la API está en línea y enlaza a Swagger. Por defecto usa
+La landing consulta `/api/v1` y `/api/docs-json` y enlaza a Swagger. Por defecto usa
 `http://localhost:3000`. Para apuntar a otro backend:
 
 - Cambia `API_POR_DEFECTO` al inicio del `<script>` en `index.html`, o
