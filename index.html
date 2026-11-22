@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>UZDI API, backend de gestión integral</title>
-<meta name="description" content="Backend NestJS + PostgreSQL del Sistema de Gestión Integral UZDI: expedientes, medidas socioeducativas, familias, talleres, seguridad por perfiles y auditoría. Proyecto académico PUCE.">
+<title>UZDI API, defensa del backend</title>
+<meta name="description" content="Presentación del backend NestJS + PostgreSQL del Sistema de Gestión Integral UZDI: DER, flujo de peticiones, seguridad RBAC, auditoría de datos, endpoints y despliegue. Proyecto académico PUCE.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -20,12 +20,14 @@
     --azul-accion: #1C86F2;
     --cielo: #E4F0FD;
     --ok: #22A06B;
-    --ancho: 1240px;
+    --error: #D2453B;
+    --ancho: 1440px;
     --radio: 999px;
+    --nav: 76px;
     --get: #1C86F2; --post: #22A06B; --patch: #C77A12; --put: #8A4FD8; --delete: #D2453B;
   }
   *, *::before, *::after { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
+  html { scroll-behavior: smooth; scroll-padding-top: var(--nav); }
   body {
     margin: 0; background: var(--papel); color: var(--tinta);
     font-family: 'Archivo', system-ui, sans-serif; font-size: 1rem; line-height: 1.6;
@@ -36,7 +38,7 @@
   .oculto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .contenedor { max-width: var(--ancho); margin: 0 auto; padding: 0 24px; }
   .titular { font-stretch: 125%; font-weight: 850; text-transform: uppercase; line-height: 1.02; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
-  h2.titular { font-size: clamp(1.75rem, 3.6vw, 2.75rem); }
+  h2.titular { font-size: clamp(1.75rem, 3.4vw, 2.75rem); }
   code, pre, .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
   .boton {
     display: inline-flex; align-items: center; gap: 8px; border-radius: var(--radio);
@@ -50,414 +52,696 @@
   .boton-contorno:hover { background: var(--cielo); }
   .boton-claro { border-color: rgba(255,255,255,.7); color: #fff; background: transparent; }
   .boton-claro:hover { background: rgba(255,255,255,.12); }
+  .boton-chico { padding: 7px 14px; font-size: .8125rem; }
   .etiqueta {
     border: 0; background: var(--cielo); color: var(--tinta); border-radius: var(--radio);
-    padding: 8px 16px; font: inherit; font-size: .8125rem; cursor: pointer;
+    padding: 8px 16px; font: inherit; font-size: .8125rem; cursor: pointer; text-decoration: none;
   }
-  .etiqueta:hover, .etiqueta[aria-pressed="true"] { background: var(--azul-accion); color: #fff; }
+  .etiqueta:hover, .etiqueta[aria-pressed="true"], .etiqueta[aria-selected="true"] { background: var(--azul-accion); color: #fff; }
+  .metodo { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: .6875rem; font-weight: 600; padding: 3px 8px; border-radius: 4px; color: #fff; background: var(--get); min-width: 62px; text-align: center; }
+  .metodo.POST { background: var(--post); } .metodo.PATCH { background: var(--patch); } .metodo.PUT { background: var(--put); } .metodo.DELETE { background: var(--delete); }
+  .k { color: #1946C8; } .s { color: #A1530C; } .n { color: #178A5A; }
 
-  /* Navegación */
-  .nav { position: sticky; top: 0; z-index: 10; background: rgba(255,255,255,.94); backdrop-filter: blur(8px); }
-  .nav .contenedor { display: flex; align-items: center; justify-content: space-between; height: 76px; gap: 24px; }
+  /* ---------- Navegación ---------- */
+  .nav { position: sticky; top: 0; z-index: 20; background: rgba(255,255,255,.95); backdrop-filter: blur(8px); }
+  .nav .contenedor { display: flex; align-items: center; justify-content: space-between; height: var(--nav); gap: 20px; }
   .marca { display: flex; align-items: center; gap: 10px; text-decoration: none; }
   .marca span { font-stretch: 125%; font-weight: 850; font-size: 1.25rem; letter-spacing: .02em; }
   .marca small { font-weight: 500; font-size: .8125rem; color: var(--gris); font-stretch: 100%; letter-spacing: 0; }
-  .nav ul { display: flex; gap: 36px; list-style: none; margin: 0; padding: 0; font-size: .9375rem; }
-  .nav ul a { text-decoration: none; }
+  .nav ul { display: flex; gap: 26px; list-style: none; margin: 0; padding: 0; font-size: .9375rem; }
+  .nav ul a { text-decoration: none; padding: 4px 0; border-bottom: 2px solid transparent; }
   .nav ul a:hover { color: var(--azul-accion); }
-  .nav-derecha { display: flex; align-items: center; gap: 20px; }
+  .nav ul a[aria-current="true"] { color: var(--azul-accion); border-bottom-color: var(--azul-accion); }
+  .nav-derecha { display: flex; align-items: center; gap: 14px; }
   .estado { display: inline-flex; align-items: center; gap: 8px; font-size: .8125rem; color: var(--gris); white-space: nowrap; }
   .estado i { width: 8px; height: 8px; border-radius: 50%; background: #C9C4C4; }
   .estado.en-linea i { background: var(--ok); box-shadow: 0 0 0 4px rgba(34,160,107,.15); }
+  .reloj { font-family: 'JetBrains Mono', monospace; font-size: .8125rem; font-weight: 600; background: var(--humo); border: 0; border-radius: var(--radio); padding: 9px 14px; cursor: pointer; color: var(--tinta); }
+  .reloj.corriendo { background: var(--cielo); color: var(--azul); }
+  .reloj.alerta { background: #FDE7E5; color: var(--error); }
+  .progreso { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--azul-accion); width: 0; transition: width .3s; }
 
-  /* Portada */
-  .portada { position: relative; padding: 88px 0 72px; text-align: center; }
+  /* ---------- Controles de diapositiva ---------- */
+  .controles {
+    position: fixed; right: 24px; bottom: 24px; z-index: 20; display: flex; align-items: center; gap: 6px;
+    background: var(--tinta); color: #fff; border-radius: var(--radio); padding: 6px 6px 6px 18px; font-size: .8125rem;
+  }
+  .controles span { margin-right: 8px; white-space: nowrap; }
+  .controles button { width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(255,255,255,.12); color: #fff; cursor: pointer; display: grid; place-items: center; }
+  .controles button:hover { background: rgba(255,255,255,.24); }
+
+  /* ---------- Diapositivas ---------- */
+  .diapo { min-height: calc(100vh - var(--nav)); padding: 56px 0 72px; display: flex; align-items: center; border-bottom: 1px solid var(--linea); }
+  .diapo > .contenedor { width: 100%; }
+  .cabecera { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 32px; flex-wrap: wrap; }
+  .cabecera p { color: var(--gris); margin: 10px 0 0; max-width: 64ch; }
+  .numero { font-stretch: 125%; font-weight: 850; color: var(--azul-accion); font-size: 1rem; margin-bottom: 10px; display: block; }
+  .rejilla { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr); gap: 40px; align-items: start; }
+  .rejilla > * { min-width: 0; }
+  .rejilla.apilada { grid-template-columns: 1fr; gap: 28px; }
+  .rejilla.apilada .cambios { display: grid; grid-template-columns: 220px 1fr; gap: 20px; align-items: start; }
+  .rejilla.apilada .cambios > p { margin: 0; }
+  .rejilla.apilada .cambios ol { grid-column: 2; grid-row: 1 / span 2; grid-template-columns: repeat(3, 1fr); }
+
+  /* Panel "Qué cambiamos" */
+  .cambios { background: var(--humo); border-radius: 4px; padding: 28px; }
+  .cambios h3 { margin: 0 0 4px; font-size: 1.125rem; }
+  .cambios > p { margin: 0 0 18px; font-size: .875rem; color: var(--gris); }
+  .cambios ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+  .cambios li { background: #fff; border-radius: 4px; padding: 14px 16px; border-left: 3px solid var(--azul-accion); }
+  .cambios .antes { display: block; font-size: .8125rem; color: var(--gris); }
+  .cambios .antes::before { content: 'Antes: '; font-weight: 600; }
+  .cambios .ahora { display: block; font-size: .9375rem; font-weight: 600; margin-top: 4px; }
+  .cambios .ahora::before { content: 'Ahora: '; color: var(--azul-accion); }
+
+  /* ---------- 0. Portada ---------- */
+  .portada { position: relative; text-align: center; }
   .reticula {
     position: absolute; inset: 0; pointer-events: none; max-width: var(--ancho); margin: 0 auto; left: 24px; right: 24px;
     background-image: linear-gradient(to right, var(--linea) 1px, transparent 1px);
     background-size: calc(100% / 8) 100%; border-right: 1px solid var(--linea);
   }
   .portada > .contenedor { position: relative; }
-  .portada h1 { font-size: clamp(2.25rem, 6.2vw, 4.75rem); max-width: 16ch; margin: 0 auto; }
-  .bajada { font-size: clamp(1.0625rem, 1.6vw, 1.1875rem); color: var(--gris); max-width: 60ch; margin: 24px auto 40px; }
-  .buscador {
-    display: flex; align-items: center; max-width: 620px; margin: 0 auto;
-    background: var(--humo); border-radius: var(--radio); padding: 6px 6px 6px 28px;
-  }
-  .buscador input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: .9375rem; color: var(--tinta); padding: 12px 0; }
-  .buscador input:focus { outline: none; }
-  .buscador:focus-within { box-shadow: 0 0 0 3px var(--cielo); }
-  .buscador button { width: 48px; height: 48px; border-radius: 50%; border: 0; cursor: pointer; background: var(--azul-accion); color: #fff; display: grid; place-items: center; flex: none; }
-  .sugerencias { margin-top: 24px; font-size: .8125rem; color: var(--gris); }
-  .etiquetas { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 12px; }
+  .portada h1 { font-size: clamp(2.25rem, 6vw, 4.75rem); max-width: 16ch; margin: 0 auto; }
+  .bajada { font-size: clamp(1.0625rem, 1.6vw, 1.1875rem); color: var(--gris); max-width: 60ch; margin: 24px auto 32px; }
+  .acciones { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+  .agenda { list-style: none; margin: 48px auto 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; counter-reset: ag; max-width: 900px; }
+  .agenda li { counter-increment: ag; }
+  .agenda a::before { content: counter(ag) '  '; font-weight: 700; color: var(--azul-accion); white-space: pre; }
+  .agenda a:hover::before { color: #fff; }
+  .equipo-mini { margin-top: 40px; font-size: .875rem; color: var(--gris); }
 
-  /* Bloque de petición (equivale a la gran foto de Lar) */
-  .demo { padding-bottom: 96px; }
-  .consola {
-    background: var(--azul); color: #fff; border-radius: 4px; display: grid; grid-template-columns: 1fr 1.2fr;
-    overflow: hidden;
-  }
-  .consola > div { padding: 40px; min-width: 0; }
-  .consola .peticion { border-right: 1px solid rgba(255,255,255,.18); }
-  .consola h2 { font-size: 1rem; font-weight: 600; margin: 0 0 16px; color: rgba(255,255,255,.75); font-stretch: 100%; }
-  .consola pre { margin: 0; font-size: .8125rem; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
-  .consola .linea-ruta { font-size: 1rem; font-weight: 600; margin-bottom: 20px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-  .metodo { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: .6875rem; font-weight: 600; padding: 3px 8px; border-radius: 4px; color: #fff; background: var(--get); min-width: 58px; text-align: center; }
-  .metodo.POST { background: var(--post); } .metodo.PATCH { background: var(--patch); } .metodo.PUT { background: var(--put); } .metodo.DELETE { background: var(--delete); }
-  .consola .metodo { background: #fff; color: var(--azul); }
-  .k { color: #A9C7FF; } .s { color: #FFE08A; } .n { color: #9EF0C4; }
+  /* ---------- 1. DER ---------- */
+  .der { display: block; background: #fff; border: 1px solid var(--linea); border-radius: 4px; overflow: hidden; cursor: zoom-in; position: relative; }
+  .der img { display: block; width: 100%; height: auto; }
+  .der span { position: absolute; right: 12px; bottom: 12px; background: var(--tinta); color: #fff; font-size: .75rem; font-weight: 600; padding: 6px 12px; border-radius: var(--radio); }
+  .esquemas { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 16px; font-size: .8125rem; }
+  .esquemas li { display: flex; align-items: center; gap: 8px; }
+  .esquemas i { width: 10px; height: 10px; border-radius: 2px; }
+  .esquemas b { font-weight: 600; }
+  ul.limpia { list-style: none; margin: 0; padding: 0; }
 
-  /* Secciones */
-  .seccion { padding: 96px 0; }
-  .encabezado { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 40px; flex-wrap: wrap; }
-  .encabezado p { color: var(--gris); margin: 12px 0 0; max-width: 62ch; }
+  /* ---------- 2. Flujo ---------- */
+  .flujo { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 28px 30px; counter-reset: f; }
+  .flujo li { counter-increment: f; position: relative; background: #fff; border: 1.5px solid var(--linea); border-radius: 4px; padding: 14px 14px 12px; min-height: 128px; display: flex; flex-direction: column; }
+  .flujo li::before { content: counter(f); font-stretch: 125%; font-weight: 850; font-size: 1.375rem; line-height: 1; color: var(--azul-accion); margin-bottom: 8px; }
+  .flujo li:not(:nth-child(5n))::after { content: ''; position: absolute; right: -24px; top: 50%; width: 18px; height: 12px; transform: translateY(-50%);
+    background: no-repeat center/contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 12'%3E%3Cpath d='M0 6h15M11 1l5 5-5 5' fill='none' stroke='%231C86F2' stroke-width='2'/%3E%3C/svg%3E"); }
+  .flujo li:nth-child(5)::after { content: ''; position: absolute; left: 50%; bottom: -24px; width: 12px; height: 18px; transform: translateX(-50%);
+    background: no-repeat center/contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 18'%3E%3Cpath d='M6 0v15M1 11l5 5 5-5' fill='none' stroke='%231C86F2' stroke-width='2'/%3E%3C/svg%3E"); }
+  .flujo li.clave { border-color: var(--azul); background: var(--cielo); }
+  .flujo li.bd { background: var(--azul); border-color: var(--azul); color: #fff; }
+  .flujo li.bd::before, .flujo li.bd small { color: #fff; }
+  .flujo li.fin { background: var(--tinta); border-color: var(--tinta); color: #fff; }
+  .flujo li.fin::before, .flujo li.fin small { color: #fff; }
+  .flujo h3 { margin: 0; font-size: .9375rem; line-height: 1.3; }
+  .flujo small { display: block; margin-top: 6px; font-size: .75rem; color: var(--gris); font-family: 'JetBrains Mono', monospace; flex: 1; }
+  .flujo .corta { align-self: flex-start; margin-top: 10px; font-size: .6875rem; font-weight: 600; color: var(--error); background: #FDE7E5; padding: 2px 8px; border-radius: var(--radio); }
+  .flujo-nota { margin-top: 18px; font-size: .875rem; color: var(--gris); }
+  .flujo-nota b { color: var(--error); }
 
-  /* Módulos */
-  .modulos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px 24px; }
-  .modulo { display: flex; flex-direction: column; }
-  .modulo-media {
-    container-type: inline-size; position: relative; aspect-ratio: 5 / 4; border-radius: 4px; overflow: hidden;
-    background: var(--azul); color: #fff; display: flex; align-items: flex-end; padding: 18px;
-  }
-  .modulo:nth-child(3n+2) .modulo-media { background: var(--tinta); }
-  .modulo:nth-child(3n) .modulo-media { background: var(--cielo); color: var(--azul); }
-  .modulo-media b { font-stretch: 125%; font-weight: 900; font-size: min(4.5rem, 30cqi); line-height: .85; }
-  .modulo-media em { font-style: normal; font-size: .875rem; font-weight: 600; margin: 0 0 4px 10px; }
-  .modulo-media span { position: absolute; top: 14px; left: 14px; background: #fff; color: var(--tinta); font-size: .75rem; font-weight: 600; padding: 5px 11px; border-radius: var(--radio); }
-  .modulo h3 { font-size: 1.0625rem; margin: 16px 0 4px; }
-  .modulo p { font-size: .875rem; color: var(--gris); margin: 0 0 14px; flex: 1; }
-  .modulo .tablas { font-size: .75rem; color: var(--tinta); border-top: 1px solid var(--linea); padding-top: 12px; margin-bottom: 14px; }
-  .modulo .boton { align-self: flex-start; padding: 8px 16px; font-size: .8125rem; }
+  /* ---------- 3. Seguridad ---------- */
+  .conexion { display: grid; grid-template-columns: 1.1fr auto 1.2fr auto 1fr auto 1fr; align-items: stretch; gap: 10px; margin-bottom: 28px; }
+  .conexion .caja { border: 1.5px solid var(--linea); border-radius: 4px; padding: 14px; font-size: .8125rem; }
+  .conexion .caja b { display: block; font-size: .9375rem; margin-bottom: 6px; }
+  .conexion .caja.app { background: var(--cielo); border-color: var(--azul); }
+  .conexion .caja.bd { background: var(--azul); border-color: var(--azul); color: #fff; }
+  .conexion .flecha { align-self: center; color: var(--azul-accion); font-weight: 700; }
+  .perfiles { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .perfiles span { font-size: .6875rem; font-weight: 600; background: #fff; border: 1px solid var(--linea); border-radius: var(--radio); padding: 1px 7px; }
+  .barras { display: grid; grid-template-columns: 1fr 1fr; gap: 0 32px; border: 1px solid var(--linea); border-radius: 4px; padding: 6px 24px 14px; }
+  .barra { padding: 12px 0 8px; border-bottom: 1px solid var(--linea); }
+  .barra div { display: flex; justify-content: space-between; gap: 12px; font-size: .875rem; }
+  .barra small { color: var(--gris); }
+  .barra i { display: block; height: 4px; background: var(--linea); border-radius: 2px; margin-top: 8px; position: relative; overflow: hidden; }
+  .barra i::after { content: ''; position: absolute; inset: 0 auto 0 0; width: var(--p); background: var(--azul-accion); border-radius: 2px; }
+  .barras-titulo { font-size: .875rem; color: var(--gris); margin: 0 0 10px; }
 
-  /* Proyecto (bloque superpuesto) */
-  .proyecto { position: relative; }
-  .proyecto-media { background: var(--cielo); border-radius: 4px; min-height: 420px; margin-right: 22%; padding: 48px; }
-  .proyecto-media blockquote { margin: 0; font-stretch: 125%; font-weight: 850; text-transform: uppercase; color: var(--azul); font-size: clamp(2rem, 4.4vw, 3.5rem); line-height: 1; max-width: 13ch; }
-  .proyecto-panel { position: absolute; right: 0; bottom: -40px; width: min(540px, 54%); background: var(--azul); color: #fff; padding: 48px; border-radius: 4px; }
-  .proyecto-panel h2 { font-size: clamp(1.75rem, 3vw, 2.375rem); }
-  .proyecto-panel p { margin: 16px 0 28px; color: rgba(255,255,255,.88); }
-  .cifras { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 112px; border-top: 1px solid var(--linea); border-bottom: 1px solid var(--linea); }
-  .cifra { text-align: center; padding: 36px 12px; }
+  /* ---------- 4. Auditoría ---------- */
+  .registro { border: 1px solid var(--linea); border-radius: 4px; overflow: hidden; }
+  .registro-cabeza { background: var(--azul); color: #fff; padding: 16px 22px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .registro-cabeza b { font-size: 1rem; }
+  .registro-cabeza code { font-size: .8125rem; opacity: .85; }
+  .campos { display: grid; grid-template-columns: repeat(5, 1fr); border-bottom: 1px solid var(--linea); }
+  .campos div { padding: 14px 18px; }
+  .campos div + div { border-left: 1px solid var(--linea); }
+  .campos small { display: block; font-size: .75rem; color: var(--gris); }
+  .campos b { font-size: .9375rem; }
+  .op { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: .75rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: #FCEFD9; color: #8A5300; }
+  table.diff { width: 100%; border-collapse: collapse; font-size: .875rem; }
+  .diff th { text-align: left; font-weight: 600; font-size: .75rem; color: var(--gris); padding: 10px 18px; background: var(--humo); }
+  .diff td { padding: 10px 18px; border-top: 1px solid var(--linea); font-family: 'JetBrains Mono', monospace; font-size: .8125rem; }
+  .diff tr.cambio td { background: #FFF8E8; }
+  .diff tr.cambio td:nth-child(2) { color: var(--error); text-decoration: line-through; }
+  .diff tr.cambio td:nth-child(3) { color: var(--ok); font-weight: 600; }
+  .que-audita { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 18px; }
+  .que-audita div { border: 1px solid var(--linea); border-radius: 4px; padding: 12px 14px; font-size: .8125rem; color: var(--gris); }
+  .que-audita b { display: block; color: var(--tinta); font-size: .875rem; }
+
+  /* ---------- 5. Endpoints ---------- */
+  .pestanas { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .ejemplo { border: 1px solid var(--linea); border-radius: 4px; overflow: hidden; }
+  .ejemplo-ruta { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--linea); flex-wrap: wrap; }
+  .ejemplo-ruta code { font-size: .9375rem; font-weight: 600; }
+  .ejemplo-ruta small { color: var(--gris); margin-left: auto; font-size: .8125rem; }
+  .ejemplo-cuerpo { display: grid; grid-template-columns: 1fr 1fr; }
+  .ejemplo-cuerpo > div { padding: 16px 18px; min-width: 0; }
+  .ejemplo-cuerpo > div + div { border-left: 1px solid var(--linea); background: var(--humo); }
+  .ejemplo-cuerpo h4 { margin: 0 0 8px; font-size: .75rem; color: var(--gris); font-weight: 600; }
+  .ejemplo-cuerpo pre { margin: 0; font-size: .75rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word; max-height: 236px; overflow: auto; }
+  .codigo-ok { color: var(--ok); } .codigo-error { color: var(--error); }
+  .misma-url { margin-top: 22px; border: 1px solid var(--linea); border-radius: 4px; }
+  .misma-url-cabeza { padding: 14px 18px; border-bottom: 1px solid var(--linea); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
+  .misma-url-cabeza code { font-weight: 600; }
+  .misma-url-cabeza span { font-size: .8125rem; color: var(--gris); }
+  .metodo-fila { display: grid; grid-template-columns: 78px 1fr 1.25fr; gap: 14px; align-items: center; padding: 12px 18px; border-top: 1px solid var(--linea); font-size: .875rem; }
+  .metodo-fila:first-of-type { border-top: 0; }
+  .metodo-fila code { font-size: .75rem; color: var(--gris); }
+  .codigos { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: .8125rem; margin: 18px 0 0; }
+  .codigos dt { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+  .codigos dd { margin: 0; color: var(--gris); }
+
+  /* ---------- 6. Despliegue ---------- */
+  .infra { display: grid; grid-template-columns: 1fr 1fr 1.25fr; gap: 14px; }
+  .infra .ancha { grid-column: span 2; }
+  .tarjeta { border: 1px solid var(--linea); border-radius: 4px; padding: 18px 20px; }
+  .tarjeta h3 { margin: 0 0 12px; font-size: 1rem; }
+  .tarjeta dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size: .875rem; }
+  .tarjeta dt { font-weight: 600; }
+  .tarjeta dd { margin: 0; color: var(--gris); }
+  .tarjeta.oscura { background: var(--tinta); color: #fff; border-color: var(--tinta); }
+  .tarjeta.oscura pre { margin: 0; font-size: .8125rem; line-height: 1.8; white-space: pre-wrap; word-break: break-word; }
+  .tarjeta.oscura .comentario { color: rgba(255,255,255,.55); }
+  .nube { grid-row: span 2; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; gap: 14px; background: var(--azul); color: #fff; border-radius: 4px; padding: 18px 20px; }
+  .nube code { overflow-wrap: anywhere; }
+  .nube .log { margin: 0; width: 100%; font-size: .6875rem; line-height: 1.7; background: rgba(0,0,0,.22); border-radius: 4px; padding: 12px 14px; white-space: pre-wrap; word-break: break-word; }
+  .nube b { display: block; font-size: 1rem; }
+  .nube code { font-size: .8125rem; opacity: .9; }
+
+  /* ---------- 7. Demo ---------- */
+  .ruta-demo { background: var(--azul); color: #fff; border-bottom: 0; }
+  .ruta-demo .cabecera p, .ruta-demo .numero { color: rgba(255,255,255,.82); }
+  .pasos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 24px; counter-reset: paso; }
+  .paso { counter-increment: paso; border-top: 2px solid rgba(255,255,255,.35); padding-top: 22px; display: flex; flex-direction: column; }
+  .paso::before { content: counter(paso); display: block; font-stretch: 125%; font-weight: 850; font-size: 2.75rem; line-height: 1; margin-bottom: 14px; }
+  .paso h3 { margin: 0 0 8px; font-size: 1.0625rem; }
+  .paso p { margin: 0 0 16px; font-size: .875rem; color: rgba(255,255,255,.86); flex: 1; }
+  .paso code { font-size: .75rem; background: rgba(255,255,255,.14); padding: 2px 6px; border-radius: 4px; }
+  .paso .boton { align-self: flex-start; padding: 8px 14px; font-size: .8125rem; }
+  .consejos { margin-top: 40px; display: flex; gap: 28px; flex-wrap: wrap; font-size: .875rem; color: rgba(255,255,255,.86); }
+  .consejos b { color: #fff; }
+
+  /* ---------- 8. Cierre ---------- */
+  .cifras { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--linea); border-bottom: 1px solid var(--linea); margin: 40px 0; }
+  .cifra { text-align: center; padding: 30px 12px; }
   .cifra + .cifra { border-left: 1px solid var(--linea); }
   .cifra b { display: block; font-stretch: 125%; font-weight: 850; font-size: clamp(2.25rem, 4vw, 3.25rem); line-height: 1; }
   .cifra span { display: block; margin-top: 10px; font-size: .875rem; color: var(--gris); }
+  .equipo { display: grid; grid-template-columns: repeat(5, 1fr); gap: 24px; }
+  .persona { border-top: 2px solid var(--tinta); padding-top: 18px; }
+  .persona h3 { margin: 0 0 6px; font-size: 1.0625rem; }
+  .persona p { margin: 0; color: var(--gris); font-size: .875rem; }
 
-  /* Endpoints */
-  .filtros { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; }
-  .endpoints { border-top: 1px solid var(--linea); }
-  .ep { display: grid; grid-template-columns: 76px minmax(0, 1.1fr) minmax(0, 1.3fr) 150px; gap: 16px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--linea); font-size: .9375rem; }
+  /* ---------- Anexo ---------- */
+  .anexo { padding: 64px 0 120px; }
+  .anexo details { border-top: 2px solid var(--tinta); padding-top: 18px; }
+  .anexo summary { cursor: pointer; font-weight: 700; font-size: 1.125rem; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+  .anexo summary::after { content: '+'; color: var(--azul-accion); font-size: 1.5rem; line-height: 1; }
+  .anexo details[open] summary::after { content: '−'; }
+  .filtros { display: flex; gap: 10px; flex-wrap: wrap; margin: 20px 0; align-items: center; }
+  .buscador { display: flex; align-items: center; background: var(--humo); border-radius: var(--radio); padding: 4px 18px; flex: 1; min-width: 220px; max-width: 360px; }
+  .buscador input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: .875rem; padding: 8px 0; }
+  .buscador input:focus { outline: none; }
+  .endpoints { border-top: 1px solid var(--linea); max-height: 520px; overflow: auto; }
+  .ep { display: grid; grid-template-columns: 76px minmax(0, 1.1fr) minmax(0, 1.4fr); gap: 16px; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--linea); font-size: .875rem; }
   .ep .ruta { font-family: 'JetBrains Mono', monospace; font-size: .8125rem; overflow-wrap: anywhere; }
   .ep .resumen { color: var(--gris); }
-  .ep .mod { font-size: .75rem; color: var(--gris); text-align: right; }
-  .pie-lista { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 24px; flex-wrap: wrap; font-size: .875rem; color: var(--gris); }
-  .vacio { padding: 40px 0; text-align: center; color: var(--gris); border-bottom: 1px solid var(--linea); }
+  .vacio { padding: 32px 0; text-align: center; color: var(--gris); }
 
-  /* Recorrido de una petición */
-  .ruta-peticion { background: var(--azul); color: #fff; }
-  .ruta-peticion .encabezado p { color: rgba(255,255,255,.82); }
-  .pasos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px 32px; counter-reset: paso; }
-  .paso { counter-increment: paso; border-top: 2px solid rgba(255,255,255,.35); padding-top: 22px; }
-  .paso::before { content: counter(paso); display: block; font-stretch: 125%; font-weight: 850; font-size: 2.75rem; line-height: 1; margin-bottom: 16px; }
-  .paso h3 { margin: 0 0 8px; font-size: 1.125rem; }
-  .paso p { margin: 0; font-size: .9375rem; color: rgba(255,255,255,.86); }
-  .paso code { font-size: .75rem; background: rgba(255,255,255,.14); padding: 2px 6px; border-radius: 4px; }
-
-  /* Matriz RBAC (barras de Lar) */
-  .rbac { display: grid; grid-template-columns: 1fr 1.25fr; gap: 64px; align-items: start; }
-  .rbac-texto p { color: var(--gris); max-width: 46ch; }
-  .rbac-texto ul { margin: 24px 0 0; padding: 0; list-style: none; display: grid; gap: 14px; }
-  .rbac-texto li { padding-left: 20px; position: relative; }
-  .rbac-texto li::before { content: ''; position: absolute; left: 0; top: .62em; width: 8px; height: 8px; border-radius: 50%; background: var(--azul-accion); }
-  .barras { border: 1px solid var(--linea); border-radius: 4px; padding: 12px 32px 24px; }
-  .barra { padding: 14px 0 10px; border-bottom: 1px solid var(--linea); }
-  .barra:last-child { border-bottom: 0; }
-  .barra div { display: flex; justify-content: space-between; gap: 12px; font-size: .9375rem; }
-  .barra small { color: var(--gris); }
-  .barra i { display: block; height: 4px; background: var(--linea); border-radius: 2px; margin-top: 10px; position: relative; overflow: hidden; }
-  .barra i::after { content: ''; position: absolute; inset: 0 auto 0 0; width: var(--p); background: var(--azul-accion); border-radius: 2px; }
-
-  /* Documentación */
-  .recursos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
-  .recurso { display: flex; flex-direction: column; text-decoration: none; border-top: 2px solid var(--tinta); padding-top: 20px; }
-  .recurso h3 { margin: 0 0 8px; font-size: 1.125rem; }
-  .recurso p { margin: 0 0 20px; color: var(--gris); font-size: .9375rem; flex: 1; }
-  .recurso span { color: var(--azul-accion); font-weight: 600; font-size: .875rem; }
-  .recurso:hover h3 { color: var(--azul-accion); }
-
-  /* Stack */
-  .stack { background: var(--azul); color: #fff; padding: 96px 0; }
-  .stack .contenedor { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; }
-  .stack p { color: rgba(255,255,255,.85); max-width: 44ch; }
-  .stack pre { background: rgba(0,0,0,.22); padding: 18px 20px; border-radius: 4px; font-size: .8125rem; margin: 24px 0 0; overflow-x: auto; }
-  .tecnologias { list-style: none; margin: 0; padding: 0; }
-  .tecnologias li { padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,.22); display: flex; justify-content: space-between; gap: 16px; }
-  .tecnologias small { color: rgba(255,255,255,.72); text-align: right; }
-
-  /* Equipo */
-  .equipo { display: grid; grid-template-columns: repeat(5, 1fr); gap: 24px; }
-  .persona { border-top: 2px solid var(--tinta); padding-top: 20px; }
-  .persona h3 { margin: 0 0 6px; font-size: 1.125rem; }
-  .persona p { margin: 0; color: var(--gris); font-size: .9375rem; }
-
-  /* Pie */
-  footer { background: var(--tinta); color: #fff; padding: 72px 0 32px; }
-  .pie { display: grid; grid-template-columns: 1.1fr .8fr .8fr 1.4fr; gap: 40px; }
-  .pie h4 { margin: 0 0 16px; font-size: .9375rem; }
-  .pie ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; font-size: .875rem; }
+  /* ---------- Pie ---------- */
+  footer { background: var(--tinta); color: #fff; padding: 56px 0 32px; }
+  .pie { display: flex; justify-content: space-between; gap: 40px; flex-wrap: wrap; align-items: flex-start; }
+  .pie ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px 28px; font-size: .875rem; }
   .pie ul a { text-decoration: none; color: rgba(255,255,255,.75); }
   .pie ul a:hover { color: #fff; }
-  .pie .acceso p { font-size: 1.125rem; margin: 0 0 20px; max-width: 32ch; }
-  .legal { margin-top: 64px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,.14); font-size: .8125rem; color: rgba(255,255,255,.6); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .legal { margin-top: 40px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,.14); font-size: .8125rem; color: rgba(255,255,255,.6); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 
-  @media (max-width: 1100px) {
+  /* ---------- Responsive ---------- */
+  @media (max-width: 1180px) {
     .nav ul { display: none; }
-    .modulos { grid-template-columns: repeat(2, 1fr); }
-    .recursos, .equipo { grid-template-columns: repeat(2, 1fr); }
-    .pasos { grid-template-columns: repeat(2, 1fr); }
-    .pie { grid-template-columns: 1fr 1fr; }
-    .ep { grid-template-columns: 76px minmax(0, 1fr) minmax(0, 1fr); }
-    .ep .mod { display: none; }
+    .rejilla { grid-template-columns: 1fr; }
+    .pasos { grid-template-columns: repeat(3, 1fr); }
+    .equipo { grid-template-columns: repeat(3, 1fr); }
   }
-  @media (max-width: 760px) {
-    .nav .estado { display: none; }
-    .portada { padding: 56px 0 48px; }
-    .consola { grid-template-columns: 1fr; }
-    .consola .peticion { border-right: 0; border-bottom: 1px solid rgba(255,255,255,.18); }
-    .consola > div { padding: 28px 24px; }
-    .modulos, .recursos, .equipo, .pasos { grid-template-columns: 1fr; }
-    .proyecto-media { margin-right: 0; min-height: 260px; padding: 32px; }
-    .proyecto-panel { position: static; width: auto; margin: -32px 0 0 16px; padding: 32px; }
-    .cifras { grid-template-columns: repeat(2, 1fr); margin-top: 64px; }
+  @media (max-width: 860px) {
+    .flujo { grid-template-columns: repeat(2, 1fr); }
+    .flujo li::after { display: none; }
+    .conexion { grid-template-columns: 1fr; }
+    .conexion .flecha { transform: rotate(90deg); justify-self: center; }
+    .barras { grid-template-columns: 1fr; }
+    .campos { grid-template-columns: 1fr 1fr; }
+    .diff td, .diff th { padding: 8px 10px; font-size: .75rem; overflow-wrap: anywhere; }
+    .campos div + div { border-left: 0; }
+    .campos div { border-top: 1px solid var(--linea); }
+    .que-audita { grid-template-columns: 1fr 1fr; }
+    .ejemplo-cuerpo { grid-template-columns: 1fr; }
+    .ejemplo-cuerpo > div + div { border-left: 0; border-top: 1px solid var(--linea); }
+    .metodo-fila { grid-template-columns: 70px 1fr; }
+    .metodo-fila code { grid-column: 2; }
+    .infra { grid-template-columns: 1fr; }
+    .infra .ancha { grid-column: auto !important; }
+    .nube { grid-row: auto; }
+    .rejilla.apilada .cambios { display: block; }
+    .rejilla.apilada .cambios > p { margin-bottom: 14px; }
+    .rejilla.apilada .cambios ol { grid-template-columns: 1fr; }
+    .pasos, .equipo { grid-template-columns: 1fr; }
+    .cifras { grid-template-columns: repeat(2, 1fr); }
     .cifra:nth-child(3) { border-left: 0; }
     .cifra:nth-child(n+3) { border-top: 1px solid var(--linea); }
     .ep { grid-template-columns: 70px minmax(0, 1fr); }
-    .ep .resumen { grid-column: 2; margin-top: -10px; font-size: .875rem; }
-    .rbac, .stack .contenedor { grid-template-columns: 1fr; gap: 40px; }
-    .barras { padding: 8px 20px 16px; }
-    .pie { grid-template-columns: 1fr; }
-    .seccion, .stack { padding: 64px 0; }
-    .demo { padding-bottom: 64px; }
+    .ep .resumen { grid-column: 2; margin-top: -8px; }
+    .nav .estado, .reloj { display: none; }
+    .nav .boton { padding: 10px 16px; }
+    .diapo { min-height: 0; padding: 48px 0 56px; }
+    .controles span { display: none; }
+  }
+  @media (max-height: 860px) and (min-width: 861px) {
+    .diapo { padding: 32px 0 44px; }
+    .cabecera { margin-bottom: 20px; }
+    h2.titular { font-size: clamp(1.625rem, 2.8vw, 2.25rem); }
+    .numero { margin-bottom: 4px; }
+    .cambios { padding: 20px; }
+    .cambios ol { gap: 10px; }
+    .cambios li { padding: 10px 14px; }
+    .flujo li { min-height: 108px; padding: 10px 12px; }
+    .ejemplo-cuerpo pre { max-height: 190px; }
+    .que-audita { margin-top: 12px; }
+    .que-audita div { padding: 8px 12px; }
+    .diff td, .diff th { padding: 7px 18px; }
+    .campos div { padding: 10px 16px; }
   }
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
+  @media print { .nav, .controles { display: none; } .diapo { min-height: 0; break-after: page; } }
 </style>
 </head>
 <body>
 
 <header class="nav">
   <div class="contenedor">
-    <a class="marca" href="#" aria-label="UZDI API, inicio">
+    <a class="marca" href="#inicio" aria-label="UZDI API, inicio">
       <svg width="34" height="34" viewBox="0 0 40 40" aria-hidden="true"><path d="M4 4h10v20a6 6 0 0 0 12 0V4h10v20a16 16 0 0 1-32 0z" fill="#211C1C"/></svg>
       <span>UZDI <small>API</small></span>
     </a>
-    <nav aria-label="Principal">
-      <ul>
-        <li><a href="#modulos">Módulos</a></li>
-        <li><a href="#endpoints">Endpoints</a></li>
-        <li><a href="#arquitectura">Arquitectura</a></li>
+    <nav aria-label="Secciones de la presentación">
+      <ul id="menu">
+        <li><a href="#der">DER</a></li>
+        <li><a href="#flujo">Flujo</a></li>
         <li><a href="#seguridad">Seguridad</a></li>
-        <li><a href="#equipo">Equipo</a></li>
+        <li><a href="#auditoria">Auditoría</a></li>
+        <li><a href="#endpoints">Endpoints</a></li>
+        <li><a href="#despliegue">Despliegue</a></li>
+        <li><a href="#demo">Demo</a></li>
       </ul>
     </nav>
     <div class="nav-derecha">
       <span class="estado" id="estado" role="status"><i></i><span>Comprobando API…</span></span>
+      <button class="reloj" id="reloj" type="button" title="Iniciar o pausar el temporizador de 20 minutos">20:00</button>
       <a class="boton boton-lleno" href="#" data-api="/api/docs">Abrir Swagger</a>
     </div>
+    <div class="progreso" id="progreso" aria-hidden="true"></div>
   </div>
 </header>
 
+<div class="controles" aria-label="Navegación de diapositivas">
+  <span id="posicion">1 / 9</span>
+  <button type="button" id="anterior" aria-label="Diapositiva anterior"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+  <button type="button" id="siguiente" aria-label="Diapositiva siguiente"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+</div>
+
 <main>
-  <section class="portada">
+
+  <!-- 0. Portada -->
+  <section class="diapo portada" id="inicio" data-nombre="Inicio" aria-labelledby="t0">
     <div class="reticula" aria-hidden="true"></div>
     <div class="contenedor">
-      <h1 class="titular">El backend que sigue cada caso UZDI</h1>
-      <p class="bajada">API REST en NestJS y PostgreSQL para gestionar adolescentes, expedientes judiciales, medidas socioeducativas, familias, talleres y documentos, con permisos por perfil y auditoría de cada cambio.</p>
-      <form class="buscador" role="search" id="buscador">
-        <label for="q" class="oculto">Buscar un endpoint</label>
-        <input id="q" type="search" placeholder="Busca un endpoint: expediente, login, reportes…" autocomplete="off">
-        <button type="submit" aria-label="Buscar endpoints">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        </button>
-      </form>
-      <p class="sugerencias">Lo que más se muestra en la defensa</p>
-      <div class="etiquetas" id="atajos">
-        <button class="etiqueta" type="button">login</button>
-        <button class="etiqueta" type="button">expediente</button>
-        <button class="etiqueta" type="button">medida-expediente</button>
-        <button class="etiqueta" type="button">permiso</button>
-        <button class="etiqueta" type="button">reportes</button>
-        <button class="etiqueta" type="button">historial</button>
+      <h1 class="titular" id="t0">El backend que sigue cada caso UZDI</h1>
+      <p class="bajada">API REST en NestJS y PostgreSQL para gestionar adolescentes, expedientes judiciales, medidas socioeducativas, familias, talleres y documentos, con permisos por perfil y auditoría de datos.</p>
+      <div class="acciones">
+        <a class="boton boton-lleno" href="#der">Comenzar</a>
+        <a class="boton boton-contorno" href="#" data-api="/api/docs">Probar en Swagger</a>
       </div>
+      <ol class="agenda" aria-label="Agenda">
+        <li><a class="etiqueta" href="#der">Modelo de datos</a></li>
+        <li><a class="etiqueta" href="#flujo">Flujo de peticiones</a></li>
+        <li><a class="etiqueta" href="#seguridad">Seguridad</a></li>
+        <li><a class="etiqueta" href="#auditoria">Auditoría de datos</a></li>
+        <li><a class="etiqueta" href="#endpoints">Endpoints</a></li>
+        <li><a class="etiqueta" href="#despliegue">Despliegue</a></li>
+        <li><a class="etiqueta" href="#demo">Demo en vivo</a></li>
+        <li><a class="etiqueta" href="#cierre">Cierre</a></li>
+      </ol>
+      <p class="equipo-mini">Paúl Rosero, Alejandro Flores, Joan Santacruz, Joselyn Cadena y Gabriel Aguinaga. PUCE, Ecología Integral 2026.</p>
     </div>
   </section>
 
-  <section class="demo" aria-label="Ejemplo de petición">
+  <!-- 1. DER -->
+  <section class="diapo" id="der" data-nombre="DER" aria-labelledby="t1">
     <div class="contenedor">
-      <div class="consola">
-        <div class="peticion">
-          <h2>Petición</h2>
-          <div class="linea-ruta"><span class="metodo">POST</span><code>/api/v1/auth/login</code></div>
-<pre>{
-  <span class="k">"login"</span>: <span class="s">"admin"</span>,
-  <span class="k">"password"</span>: <span class="s">"••••••••••••"</span>,
-  <span class="k">"prfl_id"</span>: <span class="n">1</span>
-}</pre>
-        </div>
+      <div class="cabecera">
         <div>
-          <h2>Respuesta 201</h2>
-<pre>{
-  <span class="k">"ok"</span>: <span class="n">true</span>,
-  <span class="k">"message"</span>: <span class="s">"Login exitoso"</span>,
-  <span class="k">"data"</span>: {
-    <span class="k">"token"</span>: <span class="s">"eyJhbGciOiJIUzI1NiIs…"</span>,
-    <span class="k">"sesion"</span>: { <span class="k">"id"</span>: <span class="n">12</span>, <span class="k">"inicio"</span>: <span class="s">"2026-11-13T14:05:00Z"</span> },
-    <span class="k">"perfil"</span>: { <span class="k">"codigo"</span>: <span class="s">"ADM"</span>, <span class="k">"nombre"</span>: <span class="s">"Administrador"</span> },
-    <span class="k">"perfilesDisponibles"</span>: [ … ]
-  }
-}</pre>
+          <span class="numero">1</span>
+          <h2 class="titular" id="t1">Diagrama entidad-relación</h2>
+          <p>27 tablas en 6 esquemas de PostgreSQL. Todas llevan borrado lógico (<code>estado</code> V/F) y fechas de creación y modificación.</p>
         </div>
       </div>
-    </div>
-  </section>
-
-  <section class="seccion" id="modulos" aria-labelledby="titulo-modulos" style="padding-top:0">
-    <div class="contenedor">
-      <div class="encabezado">
+      <div class="rejilla">
         <div>
-          <h2 class="titular" id="titulo-modulos">Ocho módulos, un expediente</h2>
-          <p>Cada módulo expone su CRUD con validación, borrado lógico y su sección en Swagger. El número grande es la cantidad de endpoints.</p>
+          <a class="der" href="assets/der-uzdi.svg" target="_blank" rel="noopener" aria-label="Abrir el DER completo en una pestaña nueva">
+            <img src="assets/der-uzdi.svg" alt="Diagrama entidad-relación del sistema UZDI con los esquemas estructura institucional, adolescente, contexto familiar, talleres, gestión documental y el recuadro de seguridad ER CAI." width="2480" height="1350">
+            <span>Abrir completo</span>
+          </a>
+          <ul class="limpia esquemas" aria-label="Esquemas">
+            <li><i style="background:#F57C00"></i><b>seguridad</b> 8 tablas, recuadro ER CAI</li>
+            <li><i style="background:#2E7D32"></i><b>adolescente</b> 9</li>
+            <li><i style="background:#1565C0"></i><b>estructura_institucional</b> 3</li>
+            <li><i style="background:#7B1FA2"></i><b>contexto_familiar</b> 3</li>
+            <li><i style="background:#00695C"></i><b>talleres_actividades</b> 2</li>
+            <li><i style="background:#004D40"></i><b>gestion_documental</b> 2</li>
+          </ul>
         </div>
-        <a class="boton boton-contorno" href="#" data-api="/api/docs">Ver todos en Swagger</a>
+        <aside class="cambios" aria-labelledby="c1">
+          <h3 id="c1">Qué cambiamos</h3>
+          <p>Del DDL inicial al modelo que presentamos.</p>
+          <ol>
+            <li><span class="antes">el expediente tenía una sola medida (FK <code>mdso_id</code>)</span><span class="ahora">tabla <code>medida_expediente</code> con <code>orden</code>: medidas sucesivas o simultáneas según el CONA</span></li>
+            <li><span class="antes">sin fechas de control</span><span class="ahora"><code>fcCrea</code> y <code>fcMod</code> en todas las tablas, mantenidas por trigger</span></li>
+            <li><span class="antes">no se sabía qué perfiles tenía cada usuario</span><span class="ahora">tabla <code>seguridad.prpf</code> persona–perfil</span></li>
+            <li><span class="antes">sin autoridad judicial</span><span class="ahora">perfil <code>JUEZ</code> con permisos sobre expedientes y medidas</span></li>
+          </ol>
+        </aside>
       </div>
-      <div class="modulos" id="modulos-lista"></div>
     </div>
   </section>
 
-  <section class="seccion" aria-labelledby="titulo-proyecto" style="padding-top:0">
+  <!-- 2. Flujo -->
+  <section class="diapo" id="flujo" data-nombre="Flujo" aria-labelledby="t2">
     <div class="contenedor">
-      <div class="proyecto">
-        <div class="proyecto-media"><blockquote>Cada cambio queda registrado</blockquote></div>
-        <div class="proyecto-panel">
-          <h2 class="titular" id="titulo-proyecto">Sobre el proyecto</h2>
-          <p>Backend académico para el seguimiento de medidas socioeducativas en las Unidades Zonales de Desarrollo Integral. Modela el expediente judicial con medidas sucesivas o simultáneas según el CONA, la red familiar y los talleres, y protege los datos de adolescentes con JWT, permisos por perfil y auditoría por triggers.</p>
-          <a class="boton boton-claro" href="https://github.com/alex171215/uzdi-backend-p8">Ver repositorio del backend</a>
-        </div>
-      </div>
-      <div class="cifras">
-        <div class="cifra"><b id="cifra-endpoints">147</b><span>Endpoints documentados</span></div>
-        <div class="cifra"><b>26</b><span>Tablas en 6 esquemas</span></div>
-        <div class="cifra"><b>51</b><span>Triggers de auditoría y fechas</span></div>
-        <div class="cifra"><b>58</b><span>Pruebas automatizadas</span></div>
-      </div>
-    </div>
-  </section>
-
-  <section class="seccion" id="endpoints" aria-labelledby="titulo-endpoints" style="padding-top:24px">
-    <div class="contenedor">
-      <div class="encabezado">
+      <div class="cabecera">
         <div>
-          <h2 class="titular" id="titulo-endpoints">Explorador de endpoints</h2>
-          <p id="origen-endpoints">Lista tomada del Swagger del backend.</p>
+          <span class="numero">2</span>
+          <h2 class="titular" id="t2">Flujo de una petición</h2>
+          <p>El orden en que NestJS procesa cada llamada, desde el frontend hasta la respuesta JSON. Si un paso falla, la petición se corta ahí.</p>
         </div>
       </div>
-      <div class="filtros" role="group" aria-label="Filtrar por método HTTP">
-        <button class="etiqueta" type="button" data-metodo="" aria-pressed="true">Todos</button>
-        <button class="etiqueta" type="button" data-metodo="GET" aria-pressed="false">GET</button>
-        <button class="etiqueta" type="button" data-metodo="POST" aria-pressed="false">POST</button>
-        <button class="etiqueta" type="button" data-metodo="PATCH" aria-pressed="false">PATCH</button>
-        <button class="etiqueta" type="button" data-metodo="PUT" aria-pressed="false">PUT</button>
-        <button class="etiqueta" type="button" data-metodo="DELETE" aria-pressed="false">DELETE</button>
-      </div>
-      <div class="endpoints" id="endpoints-lista" aria-live="polite"></div>
-      <div class="pie-lista">
-        <span id="conteo-endpoints"></span>
-        <button class="boton boton-contorno" type="button" id="ver-mas">Ver todos</button>
+      <div class="rejilla apilada">
+        <div>
+          <ol class="flujo">
+            <li><h3>Cliente</h3><small>Frontend Vue o Postman</small></li>
+            <li><h3>Bearer JWT</h3><small>Authorization: Bearer &lt;token&gt;</small></li>
+            <li class="clave"><h3>Guard de autenticación</h3><small>JwtAuthGuard</small><span class="corta">401</span></li>
+            <li class="clave"><h3>Guard RBAC de permisos</h3><small>RolesGuard → seguridad.prms</small><span class="corta">403</span></li>
+            <li class="clave"><h3>Validación del DTO</h3><small>ValidationPipe</small><span class="corta">400</span></li>
+            <li><h3>Controlador</h3><small>@Get @Post @Patch @Delete</small></li>
+            <li><h3>Servicio</h3><small>Reglas del negocio</small><span class="corta">404 / 409</span></li>
+            <li class="bd"><h3>TypeORM y PostgreSQL</h3><small>27 tablas, DDL v8</small></li>
+            <li class="bd"><h3>Trigger de auditoría</h3><small>fn_registrar_historial</small></li>
+            <li class="fin"><h3>Respuesta JSON</h3><small>{ ok, message, data }</small></li>
+          </ol>
+          <p class="flujo-nota">Las etiquetas <b>rojas</b> son el código HTTP con el que se corta la petición en ese paso.</p>
+        </div>
+        <aside class="cambios" aria-labelledby="c2">
+          <h3 id="c2">Qué cambiamos</h3>
+          <p>Lo que se reforzó en este recorrido.</p>
+          <ol>
+            <li><span class="antes">los permisos estaban escritos en el código</span><span class="ahora">el guard los lee de la base y se cambian sin reiniciar</span></li>
+            <li><span class="antes">el token seguía sirviendo tras cerrar sesión</span><span class="ahora">el guard revisa que la sesión siga abierta</span></li>
+            <li><span class="antes">duplicados y llaves foráneas daban error 500</span><span class="ahora">se traducen a 409 o 400 con un mensaje claro</span></li>
+          </ol>
+        </aside>
       </div>
     </div>
   </section>
 
-  <section class="seccion ruta-peticion" id="arquitectura" aria-labelledby="titulo-arquitectura">
+  <!-- 3. Seguridad -->
+  <section class="diapo" id="seguridad" data-nombre="Seguridad" aria-labelledby="t3">
     <div class="contenedor">
-      <div class="encabezado">
+      <div class="cabecera">
         <div>
-          <h2 class="titular" id="titulo-arquitectura">El recorrido de una petición</h2>
-          <p>Lo que pasa, en orden, entre que el frontend llama a la API y recibe la respuesta.</p>
+          <span class="numero">3</span>
+          <h2 class="titular" id="t3">Seguridad y permisos</h2>
+          <p>Los usuarios no se conectan a PostgreSQL: se autentican en la API, que valida sus permisos y usa una sola conexión administrada.</p>
+        </div>
+      </div>
+      <div class="rejilla">
+        <div>
+          <div class="conexion" aria-label="Arquitectura de la conexión">
+            <div class="caja"><b>Usuarios</b>Cada uno con su perfil<div class="perfiles"><span>ADM</span><span>JUEZ</span><span>LEGAL</span><span>TSOC</span><span>…</span></div></div>
+            <span class="flecha" aria-hidden="true">→</span>
+            <div class="caja app"><b>API NestJS</b>JWT, sesión abierta y permiso en <code>seguridad.prms</code></div>
+            <span class="flecha" aria-hidden="true">→</span>
+            <div class="caja"><b>Una conexión</b>Pool con el usuario <code>uzdi_user</code></div>
+            <span class="flecha" aria-hidden="true">→</span>
+            <div class="caja bd"><b>PostgreSQL</b>Triggers registran al usuario real</div>
+          </div>
+          <p class="barras-titulo">Acciones habilitadas por perfil, de 108 posibles</p>
+          <div class="barras" id="barras"></div>
+        </div>
+        <aside class="cambios" aria-labelledby="c3">
+          <h3 id="c3">Por qué una sola conexión</h3>
+          <p>Un usuario de base por persona saturaría <code>max_connections</code> y duplicaría la gestión de permisos. El control está en la API y la auditoría sigue registrando a la persona real.</p>
+          <ol>
+            <li><span class="antes">cualquiera podía iniciar sesión como ADM enviando <code>prfl_id: 1</code></span><span class="ahora">solo con un perfil asignado en <code>prpf</code></span></li>
+            <li><span class="antes">desactivar a un usuario no cortaba su acceso</span><span class="ahora">su token deja de servir al instante (401)</span></li>
+          </ol>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Auditoría -->
+  <section class="diapo" id="auditoria" data-nombre="Auditoría" aria-labelledby="t4">
+    <div class="contenedor">
+      <div class="cabecera">
+        <div>
+          <span class="numero">4</span>
+          <h2 class="titular" id="t4">Auditoría de datos</h2>
+          <p>Cada INSERT, UPDATE o DELETE dispara un trigger que guarda en <code>seguridad.historial</code> quién, cuándo, qué tabla y los valores antes y después. Es de solo lectura.</p>
+        </div>
+      </div>
+      <div class="rejilla">
+        <div>
+          <div class="registro">
+            <div class="registro-cabeza"><b>Registro real: el estado procesal de un expediente cambia</b><code>PATCH /api/v1/expediente/1</code></div>
+            <div class="campos">
+              <div><small>Usuario</small><b>admin</b> <small>usua_id 1</small></div>
+              <div><small>Fecha</small><b>22/11/2026 11:41</b></div>
+              <div><small>Tabla</small><b class="mono" style="font-size:.8125rem">adolescente.expediente</b></div>
+              <div><small>Operación</small><span class="op">UPDATE</span></div>
+              <div><small>Registro</small><b>expe_id 1</b></div>
+            </div>
+            <table class="diff">
+              <thead><tr><th scope="col">Campo</th><th scope="col">Antes</th><th scope="col">Después</th></tr></thead>
+              <tbody>
+                <tr><td>numero_causa</td><td>EXP-2026-0042</td><td>EXP-2026-0042</td></tr>
+                <tr class="cambio"><td>estado_procesal</td><td>En proceso</td><td>Concluido</td></tr>
+                <tr><td>estado</td><td>V</td><td>V</td></tr>
+                <tr class="cambio"><td>fcMod</td><td>11:41:29.429</td><td>11:41:29.489</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="que-audita" aria-label="Qué se audita">
+            <div><b>Usuario</b>quién hizo el cambio, tomado del token</div>
+            <div><b>Fecha y hora</b>momento exacto del cambio</div>
+            <div><b>Tabla y registro</b>esquema, tabla e id afectado</div>
+            <div><b>Operación</b>INSERT, UPDATE o DELETE</div>
+            <div><b>Valores antes</b>la fila completa en JSON</div>
+            <div><b>Valores después</b>la fila completa en JSON</div>
+          </div>
+        </div>
+        <aside class="cambios" aria-labelledby="c4">
+          <h3 id="c4">Qué cambiamos</h3>
+          <p>La auditoría existía, pero no era confiable.</p>
+          <ol>
+            <li><span class="antes">todo quedaba registrado como el usuario 1</span><span class="ahora">registra al usuario real del token</span></li>
+            <li><span class="antes">una cabecera <code>x-usuario-id</code> permitía suplantar a otro</span><span class="ahora">se ignora; solo cuenta el JWT</span></li>
+            <li><span class="antes">el historial se podía editar por la API</span><span class="ahora">solo lectura, con filtros por tabla, usuario, operación y fechas</span></li>
+          </ol>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Endpoints -->
+  <section class="diapo" id="endpoints" data-nombre="Endpoints" aria-labelledby="t5">
+    <div class="contenedor">
+      <div class="cabecera">
+        <div>
+          <span class="numero">5</span>
+          <h2 class="titular" id="t5">Endpoints principales</h2>
+          <p>Petición y respuesta reales de la API. Toda respuesta exitosa tiene la forma <code>{ ok, message, data }</code>; los errores agregan <code>statusCode</code>, <code>path</code> y <code>timestamp</code>.</p>
+        </div>
+        <span id="total-endpoints" class="etiqueta" style="cursor:default">148 endpoints en Swagger</span>
+      </div>
+      <div class="rejilla">
+        <div>
+          <div class="pestanas" role="tablist" aria-label="Ejemplos de endpoints" id="pestanas"></div>
+          <div class="ejemplo" role="tabpanel" id="panel-ejemplo" aria-live="polite"></div>
+
+          <div class="misma-url">
+            <div class="misma-url-cabeza"><code>/api/v1/expediente/1</code><span>Misma URL, distinta acción según el método</span></div>
+            <div class="metodo-fila"><span class="metodo">GET</span><span>Consulta el expediente con su adolescente y sus medidas</span><code>200 → data: { id: 1, numero_causa, … }</code></div>
+            <div class="metodo-fila"><span class="metodo PATCH">PATCH</span><span>Actualiza solo los campos enviados</span><code>200 → estado_procesal: "Concluido"</code></div>
+            <div class="metodo-fila"><span class="metodo DELETE">DELETE</span><span>Borrado lógico: el registro queda con estado F</span><code>200 → data: { id: 1, estado: false }</code></div>
+          </div>
+        </div>
+        <aside class="cambios" aria-labelledby="c5">
+          <h3 id="c5">Qué cambiamos</h3>
+          <p>La URL nombra el recurso y el método HTTP dice qué hacer con él.</p>
+          <ol>
+            <li><span class="antes">la exportación PDF devolvía error 500</span><span class="ahora">PDF binario real con <code>application/pdf</code></span></li>
+            <li><span class="antes">20 endpoints sin cuerpo en Swagger</span><span class="ahora">todos los DTO con ejemplos listos para probar</span></li>
+            <li><span class="antes">buscar "perez" no encontraba "Pérez"</span><span class="ahora">búsqueda sin tildes ni mayúsculas</span></li>
+          </ol>
+          <dl class="codigos" aria-label="Códigos de estado">
+            <dt class="codigo-ok">200 / 201</dt><dd>consulta o creación correcta</dd>
+            <dt class="codigo-error">400</dt><dd>datos inválidos en el DTO</dd>
+            <dt class="codigo-error">401</dt><dd>sin token o sesión cerrada</dd>
+            <dt class="codigo-error">403</dt><dd>el perfil no tiene la acción</dd>
+            <dt class="codigo-error">404</dt><dd>el registro no existe</dd>
+            <dt class="codigo-error">409</dt><dd>duplicado o registro en uso</dd>
+          </dl>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Despliegue -->
+  <section class="diapo" id="despliegue" data-nombre="Despliegue" aria-labelledby="t6">
+    <div class="contenedor">
+      <div class="cabecera">
+        <div>
+          <span class="numero">6</span>
+          <h2 class="titular" id="t6">Despliegue en Linux y Docker</h2>
+          <p>La base se crea sola con el DDL, el administrador, la matriz de permisos y los catálogos. Lo mismo ocurre en Render al desplegar.</p>
+        </div>
+      </div>
+      <div class="rejilla">
+        <div class="infra">
+          <div class="tarjeta">
+            <h3>Versiones</h3>
+            <dl><dt>Node.js</dt><dd>20 LTS</dd><dt>NestJS</dt><dd>11</dd><dt>PostgreSQL</dt><dd>15</dd><dt>Sistema</dt><dd>Ubuntu Server 22.04+ o Debian 12</dd></dl>
+          </div>
+          <div class="tarjeta">
+            <h3>Puertos</h3>
+            <dl><dt>3000</dt><dd>API NestJS, solo localhost</dd><dt>5432</dt><dd>PostgreSQL, solo localhost</dd><dt>80 / 443</dt><dd>Nginx, público</dd></dl>
+          </div>
+          <div class="nube">
+            <div><b>Desplegado en Render</b><code id="url-api">https://uzdi-backend-api.onrender.com</code></div>
+            <pre class="log">[init-db] El esquema ya existe; se actualiza la seguridad.
+[init-db] ✔ db/02_seguridad_rbac.sql
+[init-db] Listo: admin=1, permisos=321, sedes=6
+🚀 Servidor Backend UZDI ejecutándose</pre>
+            <a class="boton boton-claro boton-chico" href="#" data-api="/api/docs">Abrir Swagger en la nube</a>
+          </div>
+          <div class="tarjeta ancha">
+            <h3>Variables de entorno</h3>
+            <dl>
+              <dt class="mono">DATABASE_URL</dt><dd>conexión a PostgreSQL</dd>
+              <dt class="mono">JWT_SECRET</dt><dd>firma de los tokens; sin ella la API no arranca en producción</dd>
+              <dt class="mono">PORT</dt><dd>puerto de la API, por defecto 3000</dd>
+              <dt class="mono">NODE_ENV</dt><dd><code>production</code> activa CORS estricto</dd>
+              <dt class="mono">CORS_ORIGIN</dt><dd>orígenes del frontend permitidos</dd>
+            </dl>
+          </div>
+          <div class="tarjeta oscura ancha" style="grid-column:1/-1">
+            <h3>Comandos</h3>
+<pre><span class="comentario"># Desarrollo: base en Docker y API en local</span>
+docker compose up -d
+npm install && npm run start:dev
+
+<span class="comentario"># Servidor Linux: API y base en Docker</span>
+docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env.production up -d --build</pre>
+          </div>
+
+        </div>
+        <aside class="cambios" aria-labelledby="c6">
+          <h3 id="c6">Qué cambiamos</h3>
+          <p>Del "funciona en mi máquina" a un despliegue repetible.</p>
+          <ol>
+            <li><span class="antes">no existía usuario inicial: nadie podía entrar</span><span class="ahora">el seed crea el administrador y su perfil</span></li>
+            <li><span class="antes">un error en el seed cortaba la creación de la base en Docker</span><span class="ahora">scripts idempotentes, probados desde cero</span></li>
+            <li><span class="antes">Render servía una rama vieja con la base vacía</span><span class="ahora">despliega <code>main</code> e inicializa la base al arrancar</span></li>
+          </ol>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. Demo -->
+  <section class="diapo ruta-demo" id="demo" data-nombre="Demo" aria-labelledby="t7">
+    <div class="contenedor">
+      <div class="cabecera">
+        <div>
+          <span class="numero">7</span>
+          <h2 class="titular" id="t7">Demo en vivo</h2>
+          <p>Cinco pasos en Swagger. Cada botón abre el endpoint exacto en el backend desplegado.</p>
         </div>
       </div>
       <ol class="pasos">
-        <li class="paso"><h3>Autenticación</h3><p><code>JwtAuthGuard</code> valida la firma y la expiración del token (8 h). Sin token, responde 401.</p></li>
-        <li class="paso"><h3>Sesión y permisos</h3><p><code>RolesGuard</code> comprueba que la sesión siga abierta y consulta en <code>seguridad.prms</code> si el perfil tiene la acción. Si no, 403.</p></li>
-        <li class="paso"><h3>Validación</h3><p><code>ValidationPipe</code> y <code>SanitizationPipe</code> rechazan campos de más, tipos incorrectos y texto peligroso con mensajes claros.</p></li>
-        <li class="paso"><h3>Lógica y datos</h3><p>El servicio aplica las reglas del negocio y TypeORM escribe en PostgreSQL, sobre el DDL v8 con 26 tablas.</p></li>
-        <li class="paso"><h3>Auditoría</h3><p>Los triggers guardan en <code>seguridad.historial</code> qué cambió y quién lo hizo, con el usuario real del token.</p></li>
-        <li class="paso"><h3>Respuesta uniforme</h3><p>Todo sale como <code>{ ok, message, data }</code>; los errores de base de datos se traducen a 400, 404 o 409.</p></li>
+        <li class="paso"><h3>Iniciar sesión</h3><p>Usuario <code>admin</code>. Copiar el <code>token</code> y pegarlo en Authorize.</p><a class="boton boton-claro" href="#" data-api="/api/docs#/Auth/AuthController_login">POST /auth/login</a></li>
+        <li class="paso"><h3>Registrar adolescente</h3><p>Con cédula o pasaporte, cantón y datos sociodemográficos.</p><a class="boton boton-claro" href="#" data-api="/api/docs#/Adolescentes/AdolescenteController_create">POST /adolescente</a></li>
+        <li class="paso"><h3>Expediente y medida</h3><p>Abrir la causa y asignar la medida con su <code>orden</code>.</p><a class="boton boton-claro" href="#" data-api="/api/docs#/Medidas%20Expediente/MedidaExpedienteController_create">POST /medida-expediente</a></li>
+        <li class="paso"><h3>Reportes</h3><p>Descargar el listado en Excel y la ficha en PDF.</p><a class="boton boton-claro" href="#" data-api="/api/docs#/Reportes/ReportesController_exportarPdf">GET /reportes/export/pdf</a></li>
+        <li class="paso"><h3>Auditoría de datos</h3><p>Filtrar por tabla y ver quién hizo cada cambio.</p><a class="boton boton-claro" href="#" data-api="/api/docs#/Usuarios%20y%20Seguridad/HistorialController_findAll">GET /historial</a></li>
       </ol>
-    </div>
-  </section>
-
-  <section class="seccion" id="seguridad" aria-labelledby="titulo-seguridad">
-    <div class="contenedor rbac">
-      <div class="rbac-texto">
-        <h2 class="titular" id="titulo-seguridad">Permisos desde la base de datos</h2>
-        <p>Los permisos no están escritos en el código: se leen de la matriz perfil–acción del recuadro de seguridad ER CAI. El administrador los cambia por la API y se aplican sin reiniciar.</p>
-        <ul>
-          <li>Un usuario solo entra con un perfil que tenga asignado.</li>
-          <li>Cerrar sesión o desactivar al usuario invalida su token al instante.</li>
-          <li>La auditoría no se puede suplantar con cabeceras.</li>
-          <li>Contraseñas con bcrypt; nunca salen en las respuestas.</li>
-        </ul>
+      <div class="consejos">
+        <span><b>Antes de empezar:</b> abrir Swagger 2 minutos antes; Render tarda unos 50 s en despertar.</span>
+        <span><b>En Authorize:</b> pegar solo el token, sin escribir "Bearer".</span>
       </div>
-      <div class="barras" id="barras" aria-label="Acciones habilitadas por perfil"></div>
     </div>
   </section>
 
-  <section class="seccion" id="documentacion" aria-labelledby="titulo-docs" style="padding-top:0">
+  <!-- 8. Cierre -->
+  <section class="diapo" id="cierre" data-nombre="Cierre" aria-labelledby="t8">
     <div class="contenedor">
-      <div class="encabezado">
+      <div class="cabecera">
         <div>
-          <h2 class="titular" id="titulo-docs">Documentación técnica</h2>
-          <p>Lo que acompaña al código en el repositorio.</p>
+          <span class="numero">8</span>
+          <h2 class="titular" id="t8">Un backend listo para el frontend</h2>
+          <p>Documentado en Swagger, protegido por perfil, auditado y desplegado en la nube.</p>
         </div>
+        <a class="boton boton-contorno" href="https://github.com/alex171215/uzdi-backend-p8">Ver repositorio</a>
       </div>
-      <div class="recursos">
-        <a class="recurso" href="https://github.com/alex171215/uzdi-backend-p8/blob/main/docs/CATALOGO_DE_ESPECIFICACION_API_FRONTEND.md"><h3>Catálogo de la API</h3><p>Rutas, cuerpos de petición y respuestas para el equipo de frontend.</p><span>Ver catálogo</span></a>
-        <a class="recurso" href="https://github.com/alex171215/uzdi-backend-p8/blob/main/docs/DIAGRAMA_ENTIDAD_RELACION_OFICIAL_DER.md"><h3>Modelo entidad-relación</h3><p>El DER oficial con el recuadro de seguridad ER CAI y las medidas del CONA.</p><span>Ver diagrama</span></a>
-        <a class="recurso" href="https://github.com/alex171215/uzdi-backend-p8/blob/main/docs/SEGURIDAD_RBAC.md"><h3>Seguridad y RBAC</h3><p>Flujo de autorización, matriz de permisos y endpoints de seguridad.</p><span>Leer documento</span></a>
-        <a class="recurso" href="https://github.com/alex171215/uzdi-backend-p8/blob/main/docs/GUIA_DESPLIEGUE_LINUX.md"><h3>Guía de despliegue</h3><p>Instalación en Linux con Docker o nativa con PM2 y Nginx.</p><span>Leer guía</span></a>
-      </div>
-    </div>
-  </section>
-
-  <section class="stack" aria-labelledby="titulo-stack">
-    <div class="contenedor">
-      <div>
-        <h2 class="titular" id="titulo-stack">Se levanta con un comando</h2>
-        <p>La base se crea sola con el DDL, el usuario administrador, la matriz de permisos y los catálogos. En Render, un script hace lo mismo al desplegar.</p>
-<pre>docker compose up -d
-npm install
-npm run start:dev</pre>
-      </div>
-      <ul class="tecnologias">
-        <li><span>NestJS 11</span><small>Framework y módulos</small></li>
-        <li><span>PostgreSQL 15</span><small>DDL v8, triggers y esquemas</small></li>
-        <li><span>TypeORM</span><small>Entidades y repositorios</small></li>
-        <li><span>JWT y bcrypt</span><small>Autenticación y contraseñas</small></li>
-        <li><span>Swagger / OpenAPI</span><small>Documentación interactiva</small></li>
-        <li><span>ExcelJS y PDFKit</span><small>Reportes SNAI</small></li>
-        <li><span>Jest</span><small>Pruebas automatizadas</small></li>
-        <li><span>Docker y Render</span><small>Despliegue</small></li>
-      </ul>
-    </div>
-  </section>
-
-  <section class="seccion" id="equipo" aria-labelledby="titulo-equipo">
-    <div class="contenedor">
-      <div class="encabezado">
-        <div>
-          <h2 class="titular" id="titulo-equipo">Equipo</h2>
-          <p>Quién construyó cada parte del backend.</p>
-        </div>
+      <div class="cifras">
+        <div class="cifra"><b id="cifra-endpoints">148</b><span>Endpoints documentados</span></div>
+        <div class="cifra"><b>27</b><span>Tablas en 6 esquemas</span></div>
+        <div class="cifra"><b>51</b><span>Triggers de auditoría y fechas</span></div>
+        <div class="cifra"><b>59</b><span>Pruebas automatizadas</span></div>
       </div>
       <div class="equipo" id="equipo-lista"></div>
+    </div>
+  </section>
+
+  <!-- Anexo -->
+  <section class="anexo" id="anexo" aria-label="Anexo">
+    <div class="contenedor">
+      <details>
+        <summary>Anexo: explorador de todos los endpoints</summary>
+        <p id="origen-endpoints" style="color:var(--gris);margin:12px 0 0">Lista tomada del Swagger del backend.</p>
+        <div class="filtros">
+          <label class="buscador"><span class="oculto">Buscar endpoint</span><input id="q" type="search" placeholder="Buscar: expediente, login, reportes…" autocomplete="off"></label>
+          <div role="group" aria-label="Filtrar por método" style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="etiqueta" type="button" data-metodo="" aria-pressed="true">Todos</button>
+            <button class="etiqueta" type="button" data-metodo="GET" aria-pressed="false">GET</button>
+            <button class="etiqueta" type="button" data-metodo="POST" aria-pressed="false">POST</button>
+            <button class="etiqueta" type="button" data-metodo="PATCH" aria-pressed="false">PATCH</button>
+            <button class="etiqueta" type="button" data-metodo="PUT" aria-pressed="false">PUT</button>
+            <button class="etiqueta" type="button" data-metodo="DELETE" aria-pressed="false">DELETE</button>
+          </div>
+          <span id="conteo-endpoints" style="font-size:.8125rem;color:var(--gris)"></span>
+        </div>
+        <div class="endpoints" id="endpoints-lista" aria-live="polite"></div>
+      </details>
     </div>
   </section>
 </main>
@@ -465,32 +749,18 @@ npm run start:dev</pre>
 <footer>
   <div class="contenedor">
     <div class="pie">
-      <div>
-        <a class="marca" href="#" aria-label="UZDI API, inicio">
-          <svg width="34" height="34" viewBox="0 0 40 40" aria-hidden="true"><path d="M4 4h10v20a6 6 0 0 0 12 0V4h10v20a16 16 0 0 1-32 0z" fill="#fff"/></svg>
-          <span>UZDI <small style="color:rgba(255,255,255,.6)">API</small></span>
-        </a>
-      </div>
-      <div>
-        <h4>API</h4>
-        <ul>
-          <li><a href="#" data-api="/api/docs">Swagger</a></li>
-          <li><a href="#" data-api="/api/docs-json">Especificación OpenAPI</a></li>
-          <li><a href="#" data-api="/api/v1">Estado</a></li>
-        </ul>
-      </div>
-      <div>
-        <h4>Código</h4>
-        <ul>
-          <li><a href="https://github.com/alex171215/uzdi-backend-p8">Repositorio del backend</a></li>
-          <li><a href="https://github.com/AlejandroFloresLu/UZDI-P">Repositorio de esta página</a></li>
-          <li><a href="#documentacion">Documentación</a></li>
-        </ul>
-      </div>
-      <div class="acceso">
-        <p>Prueba la API en vivo: inicia sesión en Swagger y autoriza con el token.</p>
-        <a class="boton boton-lleno" href="#" data-api="/api/docs">Abrir Swagger</a>
-      </div>
+      <a class="marca" href="#inicio" aria-label="UZDI API, inicio">
+        <svg width="34" height="34" viewBox="0 0 40 40" aria-hidden="true"><path d="M4 4h10v20a6 6 0 0 0 12 0V4h10v20a16 16 0 0 1-32 0z" fill="#fff"/></svg>
+        <span>UZDI <small style="color:rgba(255,255,255,.6)">API</small></span>
+      </a>
+      <ul>
+        <li><a href="#" data-api="/api/docs">Swagger</a></li>
+        <li><a href="#" data-api="/api/docs-json">Especificación OpenAPI</a></li>
+        <li><a href="https://github.com/alex171215/uzdi-backend-p8">Repositorio del backend</a></li>
+        <li><a href="https://github.com/alex171215/uzdi-backend-p8/blob/main/docs/GUIA_DESPLIEGUE_LINUX.md">Guía de despliegue</a></li>
+        <li><a href="https://github.com/alex171215/uzdi-backend-p8/blob/main/docs/SEGURIDAD_RBAC.md">Seguridad y RBAC</a></li>
+        <li><a href="https://github.com/alex171215/uzdi-backend-p8/blob/main/docs/CATALOGO_DE_ESPECIFICACION_API_FRONTEND.md">Catálogo de la API</a></li>
+      </ul>
     </div>
     <div class="legal">
       <span>Proyecto académico PUCE, Ecología Integral 2026</span>
@@ -506,40 +776,136 @@ npm run start:dev</pre>
   // ---------------------------------------------------------------
   const API_POR_DEFECTO = 'https://uzdi-backend-api.onrender.com';
   const API = (new URLSearchParams(location.search).get('api') || API_POR_DEFECTO).replace(/\/+$/, '');
-  document.querySelectorAll('[data-api]').forEach((a) => { a.href = API + a.dataset.api; });
+  document.querySelectorAll('[data-api]').forEach((a) => { a.href = API + a.dataset.api; a.target = '_blank'; a.rel = 'noopener'; });
+  document.getElementById('url-api').textContent = API;
 
-  // Equipo: edita aquí nombres y áreas
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const normalizar = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+  // Resalta un objeto como JSON con colores
+  function json(obj) {
+    return esc(JSON.stringify(obj, null, 2))
+      .replace(/&quot;([^&]*?)&quot;(\s*:)/g, '<span class="k">"$1"</span>$2')
+      .replace(/:\s&quot;(.*?)&quot;/g, ': <span class="s">"$1"</span>')
+      .replace(/:\s(-?\d+(?:\.\d+)?|true|false|null)/g, ': <span class="n">$1</span>');
+  }
+
+  // Equipo
   const EQUIPO = [
-    { nombre: 'Paúl Rosero', area: 'Arquitectura core, JWT, Swagger, motor de reportes y auditoría.' },
-    { nombre: 'Alejandro Flores', area: 'Seguridad ER CAI, matriz RBAC, usuarios y sesiones, despliegue en Linux y Render.' },
-    { nombre: 'Joan Santacruz', area: 'Dominio judicial: expedientes, medidas socioeducativas del CONA y diagrama entidad-relación.' },
-    { nombre: 'Joselyn Cadena', area: 'Contexto familiar, talleres y asistencia, gestión documental y manual de usuario.' },
-    { nombre: 'Gabriel Aguinaga', area: 'Adolescentes, catálogos, estructura geográfica y catálogo de la API.' },
+    { nombre: 'Paúl Rosero', area: 'Arquitectura core, JWT, Swagger, reportes y auditoría.' },
+    { nombre: 'Alejandro Flores', area: 'Seguridad ER CAI, matriz RBAC, sesiones y despliegue.' },
+    { nombre: 'Joan Santacruz', area: 'Dominio judicial, medidas del CONA y DER.' },
+    { nombre: 'Joselyn Cadena', area: 'Contexto familiar, talleres, gestión documental y manual.' },
+    { nombre: 'Gabriel Aguinaga', area: 'Adolescentes, catálogos, geografía y catálogo de la API.' },
   ];
+  document.getElementById('equipo-lista').innerHTML = EQUIPO.map((p) => `<div class="persona"><h3>${esc(p.nombre)}</h3><p>${esc(p.area)}</p></div>`).join('');
 
-  // Módulos: tags de Swagger que agrupa cada uno
-  const MODULOS = {
-    seg: { nombre: 'Seguridad y acceso', texto: 'Login, usuarios, perfiles, acciones, permisos, sesiones e historial.', esquema: 'seguridad', tablas: 'prsn, prfl, prpf, accn, prms, sesn, historial', tag: 'Usuarios y Seguridad' },
-    jud: { nombre: 'Dominio judicial', texto: 'Expedientes por número de causa, infracciones del COIP y medidas en orden según el CONA.', esquema: 'adolescente', tablas: 'expediente, medida_expediente, infraccion, medida_socioeducativa', tag: 'Expedientes' },
-    ado: { nombre: 'Adolescentes', texto: 'Ficha con cédula o pasaporte, búsqueda sin tildes y catálogos sociodemográficos.', esquema: 'adolescente', tablas: 'adolescente, nacionalidad, estado_civil, etnia, gdo', tag: 'Adolescentes' },
-    fam: { nombre: 'Contexto familiar', texto: 'Representantes, parentescos y el vínculo con el adolescente.', esquema: 'contexto_familiar', tablas: 'representante, tipo_parentesco, adolescente_representante', tag: 'Contexto Familiar - Representantes' },
-    geo: { nombre: 'Estructura institucional', texto: 'Provincias, cantones y sedes UZDI para los selectores en cascada.', esquema: 'estructura_institucional', tablas: 'provincia, canton, uzdi', tag: 'Estructura Institucional - Sedes UZDI' },
-    tal: { nombre: 'Talleres', texto: 'Talleres por sede y asistencia del adolescente o de su representante.', esquema: 'talleres_actividades', tablas: 'taller, asistencia_taller', tag: 'Talleres y Actividades - Talleres' },
-    doc: { nombre: 'Gestión documental', texto: 'Documentos habilitantes y evidencias vinculadas al expediente.', esquema: 'gestion_documental', tablas: 'tipo_documento, documento_expediente', tag: 'Gestión Documental - Documentos del Expediente' },
-    rep: { nombre: 'Reportes SNAI', texto: 'Adolescentes por sede y expedientes con medidas, en JSON, Excel y PDF.', esquema: 'los 6 esquemas', tablas: 'exceljs, pdfkit', tag: 'Reportes' },
-  };
-  const TAG_A_MODULO = {
-    'Usuarios y Seguridad': 'seg', 'Auth': 'seg', 'Health': 'seg',
-    'Adolescentes': 'ado', 'Catálogos - Nacionalidades': 'ado', 'Catálogos - Estados Civiles': 'ado', 'Catálogos - Etnias': 'ado', 'Catálogos - Grupos Delictivos Organizados (GDO)': 'ado',
-    'Expedientes': 'jud', 'Medidas Expediente': 'jud', 'Infracciones': 'jud', 'Medidas Socioeducativas': 'jud',
-    'Contexto Familiar - Representantes': 'fam', 'Contexto Familiar - Adolescente Representante': 'fam', 'Contexto Familiar - Tipos de Parentesco': 'fam',
-    'Talleres y Actividades - Talleres': 'tal', 'Talleres y Actividades - Asistencia': 'tal',
-    'Gestión Documental - Documentos del Expediente': 'doc', 'Gestión Documental - Tipos de Documento': 'doc',
-    'Estructura Institucional - Provincias': 'geo', 'Estructura Institucional - Cantones': 'geo', 'Estructura Institucional - Sedes UZDI': 'geo',
-    'Reportes': 'rep',
-  };
+  // Matriz RBAC inicial (db/02_seguridad_rbac.sql)
+  const PERFILES = [
+    ['ADM', 'Administrador', 108], ['CORD', 'Coordinador UZDI', 43], ['LEGAL', 'Profesional legal', 37], ['JUEZ', 'Juez', 35],
+    ['TSOC', 'Trabajo social', 30], ['EDUC', 'Educador', 26], ['PSIC', 'Psicología', 22], ['CONS', 'Consulta', 20],
+  ];
+  document.getElementById('barras').innerHTML = PERFILES.map(([c, n, v]) =>
+    `<div class="barra"><div><span><strong>${c}</strong> <small>${esc(n)}</small></span><span>${v}</span></div><i style="--p:${Math.round(v / 108 * 100)}%"></i></div>`).join('');
 
-  // Si el Swagger usa otros nombres de sección, se agrupa por el primer tramo de la ruta
+  // Ejemplos reales capturados de la API (22/11/2026)
+  const EJEMPLOS = [
+    {
+      id: 'login', titulo: 'Login', metodo: 'POST', ruta: '/api/v1/auth/login', codigo: 201, nota: 'Público',
+      peticion: { login: 'admin', password: '••••••••', prfl_id: 1 },
+      respuesta: { ok: true, message: 'Login exitoso', data: { token: 'eyJhbGciOiJIUzI1NiIs…', sesion: { id: 1, inicio: '2026-11-22T16:41:29.138Z' }, perfil: { id: 1, codigo: 'ADM', nombre: 'Administrador' }, perfilesDisponibles: ['…'] } },
+    },
+    {
+      id: 'adolescente', titulo: 'Adolescente', metodo: 'POST', ruta: '/api/v1/adolescente', codigo: 201, nota: 'Requiere token',
+      peticion: { cedula: '1723456789', nombre: 'Carlos Andrés', apellido: 'Pérez Gómez', fecha_nac: '2008-05-14', sexo: 'M', fecha_ingr: '2026-02-01', nacn_id: 1, etcv_id: 1, etna_id: 1, cntn_id: 11 },
+      respuesta: { ok: true, message: 'Operación realizada correctamente', data: { id: 1, cedula: '1723456789', nombre: 'Carlos Andrés', apellido: 'Pérez Gómez', estado: true, cntn_id: 11 }, timestamp: '2026-11-22T16:41:29.396Z' },
+    },
+    {
+      id: 'medida', titulo: 'Medida del expediente', metodo: 'POST', ruta: '/api/v1/medida-expediente', codigo: 201, nota: 'Orden según el CONA',
+      peticion: { expe_id: 1, mdso_id: 4, orden: 1, fecha_inicio: '2026-03-01', fecha_fin: '2026-09-01' },
+      respuesta: { ok: true, message: 'Operación realizada correctamente', data: { id: 1, expe_id: 1, medida: { id: 4, nombre: 'Libertad asistida', duracion_meses: 12 }, orden: 1, fecha_inicio: '2026-03-01', fecha_fin: '2026-09-01', estado_cumplimiento: 'En proceso' }, timestamp: '2026-11-22T16:41:29.540Z' },
+    },
+    {
+      id: 'error409', titulo: 'Error 409', metodo: 'POST', ruta: '/api/v1/adolescente', codigo: 409, nota: 'Cédula repetida',
+      peticion: { cedula: '1723456789', nombre: 'Otro', apellido: 'Nombre', '…': '…' },
+      respuesta: { ok: false, statusCode: 409, message: 'Ya existe un registro con cedula = "1723456789"', errors: ['Key (cedula)=(1723456789) already exists.'], path: '/api/v1/adolescente', timestamp: '2026-11-22T16:41:29.562Z' },
+    },
+    {
+      id: 'error401', titulo: 'Error 401', metodo: 'GET', ruta: '/api/v1/expediente', codigo: 401, nota: 'Sin cabecera Authorization',
+      peticion: null,
+      respuesta: { ok: false, statusCode: 401, message: 'Token de autenticación no proporcionado o formato inválido', errors: null, path: '/api/v1/expediente', timestamp: '2026-11-22T16:41:29.572Z' },
+    },
+  ];
+  const pestanas = document.getElementById('pestanas');
+  const panel = document.getElementById('panel-ejemplo');
+  pestanas.innerHTML = EJEMPLOS.map((e, i) => `<button class="etiqueta" type="button" role="tab" id="tab-${e.id}" aria-controls="panel-ejemplo" aria-selected="${i === 0}">${esc(e.titulo)}</button>`).join('');
+  function mostrarEjemplo(i) {
+    const e = EJEMPLOS[i];
+    [...pestanas.children].forEach((b, j) => b.setAttribute('aria-selected', String(i === j)));
+    panel.setAttribute('aria-labelledby', 'tab-' + e.id);
+    panel.innerHTML = `
+      <div class="ejemplo-ruta"><span class="metodo ${e.metodo}">${e.metodo}</span><code>${esc(e.ruta)}</code><small>${esc(e.nota)}</small></div>
+      <div class="ejemplo-cuerpo">
+        <div><h4>Petición</h4><pre>${e.peticion ? json(e.peticion) : esc('Sin cuerpo.\nSin cabecera Authorization.')}</pre></div>
+        <div><h4>Respuesta <span class="${e.codigo < 300 ? 'codigo-ok' : 'codigo-error'}">${e.codigo}</span></h4><pre>${json(e.respuesta)}</pre></div>
+      </div>`;
+  }
+  [...pestanas.children].forEach((b, i) => b.addEventListener('click', () => mostrarEjemplo(i)));
+  pestanas.addEventListener('keydown', (ev) => {
+    const actual = [...pestanas.children].findIndex((b) => b.getAttribute('aria-selected') === 'true');
+    if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') {
+      ev.stopPropagation(); ev.preventDefault();
+      const n = (actual + (ev.key === 'ArrowRight' ? 1 : -1) + EJEMPLOS.length) % EJEMPLOS.length;
+      mostrarEjemplo(n); pestanas.children[n].focus();
+    }
+  });
+  mostrarEjemplo(0);
+
+  // ---------- Navegación tipo presentación ----------
+  const diapos = [...document.querySelectorAll('.diapo')];
+  const menu = [...document.querySelectorAll('#menu a')];
+  const posicion = document.getElementById('posicion');
+  const progreso = document.getElementById('progreso');
+  let actual = 0;
+  function marcar(i) {
+    actual = i;
+    posicion.textContent = `${i + 1} / ${diapos.length}  ${diapos[i].dataset.nombre}`;
+    progreso.style.width = `${(i / (diapos.length - 1)) * 100}%`;
+    menu.forEach((a) => a.setAttribute('aria-current', String(a.getAttribute('href') === '#' + diapos[i].id)));
+  }
+  const ir = (i) => { const n = Math.max(0, Math.min(diapos.length - 1, i)); diapos[n].scrollIntoView(); marcar(n); };
+  const observador = new IntersectionObserver((entradas) => {
+    entradas.forEach((en) => { if (en.isIntersecting) marcar(diapos.indexOf(en.target)); });
+  }, { rootMargin: '-45% 0px -50% 0px' });
+  diapos.forEach((d) => observador.observe(d));
+  document.getElementById('anterior').addEventListener('click', () => ir(actual - 1));
+  document.getElementById('siguiente').addEventListener('click', () => ir(actual + 1));
+  document.addEventListener('keydown', (ev) => {
+    if (ev.target.closest('input, textarea, select, [role="tablist"], summary') || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    if (['ArrowRight', 'ArrowDown', 'PageDown'].includes(ev.key) || (ev.key === ' ' && !ev.target.closest('button, a'))) { ev.preventDefault(); ir(actual + 1); }
+    else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(ev.key)) { ev.preventDefault(); ir(actual - 1); }
+    else if (ev.key === 'Home') { ev.preventDefault(); ir(0); }
+    else if (ev.key === 'End') { ev.preventDefault(); ir(diapos.length - 1); }
+  });
+  marcar(0);
+
+  // ---------- Temporizador de 20 minutos ----------
+  const reloj = document.getElementById('reloj');
+  let restante = 20 * 60, intervalo = null;
+  const pintarReloj = () => {
+    const m = Math.floor(Math.abs(restante) / 60), s = Math.abs(restante) % 60;
+    reloj.textContent = `${restante < 0 ? '−' : ''}${m}:${String(s).padStart(2, '0')}`;
+    reloj.classList.toggle('alerta', restante <= 120);
+  };
+  reloj.addEventListener('click', () => {
+    if (intervalo) { clearInterval(intervalo); intervalo = null; reloj.classList.remove('corriendo'); return; }
+    reloj.classList.add('corriendo');
+    intervalo = setInterval(() => { restante -= 1; pintarReloj(); }, 1000);
+  });
+  reloj.addEventListener('dblclick', () => { clearInterval(intervalo); intervalo = null; restante = 20 * 60; reloj.classList.remove('corriendo'); pintarReloj(); });
+
+  // ---------- Anexo: explorador de endpoints ----------
+  let ENDPOINTS = [["GET","/","seg","Verificación de estado de la API"],["GET","/health","seg","Endpoint explícito de health check"],["POST","/auth/login","seg","Iniciar sesión y obtener token JWT de acceso"],["GET","/auth/me","seg","Usuario autenticado, su perfil y las acciones que puede ejecutar"],["POST","/auth/logout","seg","Cerrar sesión activa en seguridad.sesn"],["POST","/auth/change-password","seg","Cambiar contraseña de usuario"],["POST","/users","seg","Registrar usuario (exige perfil institucional activo, RF-12 → RF-01)"],["GET","/users","seg","Listar usuarios activos"],["GET","/users/search","seg","Buscar por nombres, apellidos, login o correo"],["GET","/users/{id}","seg","Detalle de un usuario"],["PATCH","/users/{id}","seg","Actualizar usuario (incluye restablecer contraseña)"],["DELETE","/users/{id}","seg","Desactivar usuario (borrado lógico; su token deja de servir)"],["GET","/users/{id}/perfiles","seg","Perfiles institucionales asignados al usuario (seguridad.prpf)"],["PUT","/users/{id}/perfiles","seg","Reemplazar los perfiles asignados al usuario"],["POST","/provincia","geo","Crear una nueva provincia"],["GET","/provincia","geo","Listar todas las provincias activas"],["GET","/provincia/{id}","geo","Obtener detalle de una provincia por ID"],["PATCH","/provincia/{id}","geo","Actualizar datos de una provincia"],["DELETE","/provincia/{id}","geo","Desactivar lógicamente una provincia"],["POST","/canton","geo","Crear un nuevo cantón"],["GET","/canton","geo","Listar todos los cantones activos (filtrable por prov_id)"],["GET","/canton/{id}","geo","Obtener detalle de un cantón por ID"],["PATCH","/canton/{id}","geo","Actualizar un cantón existente"],["DELETE","/canton/{id}","geo","Desactivar lógicamente un cantón"],["POST","/uzdi","geo","Crear una nueva sede UZDI"],["GET","/uzdi","geo","Listar todas las sedes UZDI activas (filtrable por cntn_id)"],["GET","/uzdi/{id}","geo","Obtener detalle de una sede UZDI por ID"],["PATCH","/uzdi/{id}","geo","Actualizar una sede UZDI"],["DELETE","/uzdi/{id}","geo","Desactivar lógicamente una sede UZDI"],["POST","/perfil","seg","Crear perfil institucional"],["GET","/perfil","seg","Listar perfiles (activos por defecto)"],["GET","/perfil/{id}","seg","Detalle de un perfil"],["PATCH","/perfil/{id}","seg","Actualizar perfil"],["DELETE","/perfil/{id}","seg","Desactivar perfil (borrado lógico)"],["GET","/perfil/{id}/permisos","seg","Acciones habilitadas para el perfil (seguridad.prms)"],["POST","/accion","seg","Registrar acción"],["GET","/accion","seg","Listar acciones (filtro ?q= y ?incluirInactivos=true)"],["GET","/accion/{id}","seg","Detalle de una acción"],["PATCH","/accion/{id}","seg","Actualizar acción"],["DELETE","/accion/{id}","seg","Desactivar acción (borrado lógico)"],["POST","/permiso","seg","Otorgar una acción a un perfil"],["GET","/permiso","seg","Consultar matriz de permisos (?prfl_id=&accn_id=)"],["POST","/permiso/perfil/{prflId}/acciones","seg","Asignar varias acciones a un perfil"],["GET","/permiso/{id}","seg","Detalle de un permiso"],["DELETE","/permiso/{id}","seg","Revocar permiso por prms_id (borrado lógico)"],["DELETE","/permiso/perfil/{prflId}/acciones/{accnId}","seg","Revocar una acción a un perfil"],["GET","/persona","seg","Listar personas activas (para altas usar POST /users)"],["GET","/persona/{id}","seg","Detalle de una persona"],["GET","/sesion","seg","Bitácora de sesiones (?activas=true&prsn_id=)"],["GET","/sesion/{id}","seg","Detalle de una sesión"],["PATCH","/sesion/{id}/cerrar","seg","Forzar cierre de una sesión (invalida su token)"],["GET","/historial","seg","Consultar auditoría (filtros por tabla, registro, usuario, acción y fechas)"],["GET","/historial/{id}","seg","Detalle de un registro de auditoría"],["POST","/nacionalidad","ado","Crear una nueva nacionalidad"],["GET","/nacionalidad","ado","Listar nacionalidades activas"],["GET","/nacionalidad/{id}","ado","Obtener detalle de una nacionalidad por ID"],["PATCH","/nacionalidad/{id}","ado","Actualizar una nacionalidad"],["DELETE","/nacionalidad/{id}","ado","Desactivar lógicamente una nacionalidad"],["POST","/estado-civil","ado","Crear un nuevo estado civil"],["GET","/estado-civil","ado","Listar estados civiles activos"],["GET","/estado-civil/{id}","ado","Obtener detalle de un estado civil por ID"],["PATCH","/estado-civil/{id}","ado","Actualizar un estado civil"],["DELETE","/estado-civil/{id}","ado","Desactivar lógicamente un estado civil"],["POST","/etnia","ado","Crear una nueva etnia"],["GET","/etnia","ado","Listar etnias activas"],["GET","/etnia/{id}","ado","Obtener detalle de una etnia por ID"],["PATCH","/etnia/{id}","ado","Actualizar una etnia"],["DELETE","/etnia/{id}","ado","Desactivar lógicamente una etnia"],["POST","/gdo","ado","Registrar un nuevo GDO en catálogo"],["GET","/gdo","ado","Listar GDOs activos"],["GET","/gdo/{id}","ado","Obtener detalle de un GDO por ID"],["PATCH","/gdo/{id}","ado","Actualizar un GDO"],["DELETE","/gdo/{id}","ado","Desactivar lógicamente un GDO"],["POST","/infraccion","jud","Crear una nueva infracción"],["GET","/infraccion","jud","Listar infracciones"],["GET","/infraccion/{id}","jud","Obtener detalle de una infracción por ID"],["PUT","/infraccion/{id}","jud","Actualizar completamente una infraccion (PUT)"],["PATCH","/infraccion/{id}","jud","Actualizar parcialmente una infraccion (PATCH)"],["DELETE","/infraccion/{id}","jud","Desactivar lógicamente una infracción"],["GET","/infraccion/{id}/expedientes","jud","Listar expedientes vinculados a una infracción"],["POST","/medida-socioeducativa","jud","Crear una nueva medida socioeducativa"],["GET","/medida-socioeducativa","jud","Listar medidas socioeducativas"],["GET","/medida-socioeducativa/{id}","jud","Obtener detalle de una medida socioeducativa"],["PUT","/medida-socioeducativa/{id}","jud","Actualizar completamente el tipo de medida (PUT)"],["PATCH","/medida-socioeducativa/{id}","jud","Actualizar parcialmente el tipo de medida (PATCH)"],["DELETE","/medida-socioeducativa/{id}","jud","Desactivar lógicamente una medida socioeducativa"],["GET","/medida-socioeducativa/{id}/expedientes","jud","Listar expedientes vinculados a una medida"],["POST","/adolescente","ado","Registrar un nuevo adolescente"],["GET","/adolescente","ado","Listar todos los adolescentes activos"],["GET","/adolescente/search","ado","Buscar adolescentes activos por coincidencia en nombre, apellido o cédula"],["GET","/adolescente/{id}","ado","Consultar ficha de adolescente por ID"],["PATCH","/adolescente/{id}","ado","Actualizar datos de un adolescente"],["DELETE","/adolescente/{id}","ado","Inactivar adolescente (borrado lógico)"],["POST","/expediente","jud","Aperturar un nuevo expediente judicial"],["GET","/expediente","jud","Listar expedientes judiciales con filtros opcionales"],["GET","/expediente/{id}","jud","Obtener detalle de un expediente con sus medidas socioeducativas"],["PUT","/expediente/{id}","jud","Actualizar completamente los datos de un expediente (PUT)"],["PATCH","/expediente/{id}","jud","Actualizar parcialmente un expediente (PATCH)"],["DELETE","/expediente/{id}","jud","Desactivar lógicamente un expediente judicial"],["POST","/medida-expediente","jud","Asignar una medida socioeducativa a un expediente"],["GET","/medida-expediente","jud","Listar medidas asignadas con filtros opcionales"],["GET","/medida-expediente/{id}","jud","Obtener detalle de una medida asignada"],["PUT","/medida-expediente/{id}","jud","Actualizar completamente la medida socioeducativa (PUT)"],["PATCH","/medida-expediente/{id}","jud","Actualizar seguimiento o estado de una medida asignada"],["DELETE","/medida-expediente/{id}","jud","Desactivar lógicamente una medida asignada"],["POST","/tipo-parentesco","fam","Crear nuevo tipo de parentesco"],["GET","/tipo-parentesco","fam","Listar todos los tipos de parentesco activos"],["GET","/tipo-parentesco/{id}","fam","Obtener un tipo de parentesco por ID"],["PATCH","/tipo-parentesco/{id}","fam","Actualizar tipo de parentesco"],["DELETE","/tipo-parentesco/{id}","fam","Inactivar tipo de parentesco (borrado lógico)"],["POST","/representante","fam","Registrar nuevo representante legal o tutor"],["GET","/representante","fam","Listar todos los representantes activos"],["GET","/representante/{id}","fam","Consultar representante por ID"],["PATCH","/representante/{id}","fam","Actualizar datos de un representante"],["DELETE","/representante/{id}","fam","Inactivar representante (borrado lógico)"],["GET","/representante/cedula/{cedula}","fam","Consultar representante por número de cédula"],["POST","/adolescente-representante","fam","Vincular un representante legal o tutor a un adolescente"],["GET","/adolescente-representante","fam","Listar todos los vínculos de adolescentes y representantes"],["GET","/adolescente-representante/adolescente/{adlc_id}","fam","Listar los representantes legales asociados a un adolescente"],["GET","/adolescente-representante/{id}","fam","Consultar un vínculo por su ID"],["PATCH","/adolescente-representante/{id}","fam","Actualizar un vínculo adolescente-representante"],["DELETE","/adolescente-representante/{id}","fam","Inactivar vínculo adolescente-representante (borrado lógico)"],["POST","/taller","tal","Planificar y registrar un nuevo taller formativo"],["GET","/taller","tal","Listar todos los talleres activos"],["GET","/taller/{id}","tal","Consultar información detallada de un taller por ID"],["PATCH","/taller/{id}","tal","Actualizar información de un taller"],["DELETE","/taller/{id}","tal","Inactivar taller (borrado lógico)"],["POST","/asistencia-taller","tal","Registrar asistencia a taller (valida restricción: adolescente o representante)"],["GET","/asistencia-taller","tal","Listar registros de asistencia activos"],["GET","/asistencia-taller/taller/{tall_id}","tal","Consultar listado de asistencia para un taller específico"],["GET","/asistencia-taller/{id}","tal","Consultar registro de asistencia por ID"],["PATCH","/asistencia-taller/{id}","tal","Actualizar estado de asistencia u observaciones"],["DELETE","/asistencia-taller/{id}","tal","Inactivar registro de asistencia (borrado lógico)"],["POST","/tipo-documento","doc","Registrar un nuevo tipo de documento"],["GET","/tipo-documento","doc","Listar todos los tipos de documento activos"],["GET","/tipo-documento/{id}","doc","Consultar tipo de documento por ID"],["PATCH","/tipo-documento/{id}","doc","Actualizar tipo de documento"],["DELETE","/tipo-documento/{id}","doc","Inactivar tipo de documento (borrado lógico)"],["POST","/documento-expediente","doc","Registrar documento o evidencia en un expediente judicial"],["GET","/documento-expediente","doc","Listar todos los documentos de expedientes activos"],["GET","/documento-expediente/expediente/{expe_id}","doc","Listar documentos vinculados a un expediente específico"],["GET","/documento-expediente/{id}","doc","Consultar documento de expediente por ID"],["PATCH","/documento-expediente/{id}","doc","Actualizar estado de trámite o datos del documento"],["DELETE","/documento-expediente/{id}","doc","Inactivar documento de expediente (borrado lógico)"],["GET","/reportes/uzdi/adolescentes","rep","Consolidado de adolescentes activos por provincia, cantón y sede UZDI"],["GET","/reportes/expedientes/medidas","rep","Resumen procesal de expedientes con infracciones y medidas socioeducativas"],["GET","/reportes/export/excel","rep","Descarga del reporte consolidado en formato Microsoft Excel (.xlsx)"],["GET","/reportes/export/pdf","rep","Descarga de la ficha ejecutiva institucional en formato binario PDF"]];
   const RUTA_A_MODULO = {
     '': 'seg', auth: 'seg', users: 'seg', persona: 'seg', perfil: 'seg', accion: 'seg', permiso: 'seg', sesion: 'seg', historial: 'seg',
     adolescente: 'ado', nacionalidad: 'ado', 'estado-civil': 'ado', etnia: 'ado', gdo: 'ado',
@@ -548,79 +914,27 @@ npm run start:dev</pre>
     taller: 'tal', 'asistencia-taller': 'tal', 'tipo-documento': 'doc', 'documento-expediente': 'doc',
     provincia: 'geo', canton: 'geo', uzdi: 'geo', reportes: 'rep',
   };
-  const moduloPorRuta = (ruta) => RUTA_A_MODULO[ruta.replace(/^\/api\/v1\/?/, '').split('/')[0]];
-
-  // Matriz RBAC inicial (db/02_seguridad_rbac.sql): acciones habilitadas de 108
-  const PERFILES = [
-    ['ADM', 'Administrador', 108], ['CORD', 'Coordinador UZDI', 43], ['LEGAL', 'Profesional legal', 37], ['JUEZ', 'Juez', 35],
-    ['TSOC', 'Trabajo social', 30], ['EDUC', 'Educador', 26], ['PSIC', 'Psicología', 22], ['CONS', 'Consulta', 20],
-  ];
-
-  // Copia de los endpoints (se reemplaza en vivo si la API responde)
-  let ENDPOINTS = [["GET","","seg","Verificación de estado de la API"],["POST","/auth/login","seg","Iniciar sesión y obtener token JWT de acceso"],["GET","/auth/me","seg","Usuario autenticado, su perfil y las acciones que puede ejecutar"],["POST","/auth/logout","seg","Cerrar sesión activa en seguridad.sesn"],["POST","/auth/change-password","seg","Cambiar contraseña de usuario"],["POST","/users","seg","Registrar usuario (exige perfil institucional activo, RF-12 → RF-01)"],["GET","/users","seg","Listar usuarios activos"],["GET","/users/search","seg","Buscar por nombres, apellidos, login o correo"],["GET","/users/{id}","seg","Detalle de un usuario"],["PATCH","/users/{id}","seg","Actualizar usuario (incluye restablecer contraseña)"],["DELETE","/users/{id}","seg","Desactivar usuario (borrado lógico; su token deja de servir)"],["GET","/users/{id}/perfiles","seg","Perfiles institucionales asignados al usuario (seguridad.prpf)"],["PUT","/users/{id}/perfiles","seg","Reemplazar los perfiles asignados al usuario"],["POST","/provincia","geo","Crear una nueva provincia"],["GET","/provincia","geo","Listar todas las provincias activas"],["GET","/provincia/{id}","geo","Obtener detalle de una provincia por ID"],["PATCH","/provincia/{id}","geo","Actualizar datos de una provincia"],["DELETE","/provincia/{id}","geo","Desactivar lógicamente una provincia"],["POST","/canton","geo","Crear un nuevo cantón"],["GET","/canton","geo","Listar todos los cantones activos (filtrable por prov_id)"],["GET","/canton/{id}","geo","Obtener detalle de un cantón por ID"],["PATCH","/canton/{id}","geo","Actualizar un cantón existente"],["DELETE","/canton/{id}","geo","Desactivar lógicamente un cantón"],["POST","/uzdi","geo","Crear una nueva sede UZDI"],["GET","/uzdi","geo","Listar todas las sedes UZDI activas (filtrable por cntn_id)"],["GET","/uzdi/{id}","geo","Obtener detalle de una sede UZDI por ID"],["PATCH","/uzdi/{id}","geo","Actualizar una sede UZDI"],["DELETE","/uzdi/{id}","geo","Desactivar lógicamente una sede UZDI"],["POST","/perfil","seg","Crear perfil institucional"],["GET","/perfil","seg","Listar perfiles (activos por defecto)"],["GET","/perfil/{id}","seg","Detalle de un perfil"],["PATCH","/perfil/{id}","seg","Actualizar perfil"],["DELETE","/perfil/{id}","seg","Desactivar perfil (borrado lógico)"],["GET","/perfil/{id}/permisos","seg","Acciones habilitadas para el perfil (seguridad.prms)"],["POST","/accion","seg","Registrar acción"],["GET","/accion","seg","Listar acciones (filtro ?q= y ?incluirInactivos=true)"],["GET","/accion/{id}","seg","Detalle de una acción"],["PATCH","/accion/{id}","seg","Actualizar acción"],["DELETE","/accion/{id}","seg","Desactivar acción (borrado lógico)"],["POST","/permiso","seg","Otorgar una acción a un perfil"],["GET","/permiso","seg","Consultar matriz de permisos (?prfl_id=&accn_id=)"],["POST","/permiso/perfil/{prflId}/acciones","seg","Asignar varias acciones a un perfil"],["GET","/permiso/{id}","seg","Detalle de un permiso"],["DELETE","/permiso/{id}","seg","Revocar permiso por prms_id (borrado lógico)"],["DELETE","/permiso/perfil/{prflId}/acciones/{accnId}","seg","Revocar una acción a un perfil"],["GET","/persona","seg","Listar personas activas (para altas usar POST /users)"],["GET","/persona/{id}","seg","Detalle de una persona"],["GET","/sesion","seg","Bitácora de sesiones (?activas=true&prsn_id=)"],["GET","/sesion/{id}","seg","Detalle de una sesión"],["PATCH","/sesion/{id}/cerrar","seg","Forzar cierre de una sesión (invalida su token)"],["GET","/historial","seg","Consultar auditoría (filtros por tabla, registro, usuario, acción y fechas)"],["GET","/historial/{id}","seg","Detalle de un registro de auditoría"],["POST","/nacionalidad","ado","Crear una nueva nacionalidad"],["GET","/nacionalidad","ado","Listar nacionalidades activas"],["GET","/nacionalidad/{id}","ado","Obtener detalle de una nacionalidad por ID"],["PATCH","/nacionalidad/{id}","ado","Actualizar una nacionalidad"],["DELETE","/nacionalidad/{id}","ado","Desactivar lógicamente una nacionalidad"],["POST","/estado-civil","ado","Crear un nuevo estado civil"],["GET","/estado-civil","ado","Listar estados civiles activos"],["GET","/estado-civil/{id}","ado","Obtener detalle de un estado civil por ID"],["PATCH","/estado-civil/{id}","ado","Actualizar un estado civil"],["DELETE","/estado-civil/{id}","ado","Desactivar lógicamente un estado civil"],["POST","/etnia","ado","Crear una nueva etnia"],["GET","/etnia","ado","Listar etnias activas"],["GET","/etnia/{id}","ado","Obtener detalle de una etnia por ID"],["PATCH","/etnia/{id}","ado","Actualizar una etnia"],["DELETE","/etnia/{id}","ado","Desactivar lógicamente una etnia"],["POST","/gdo","ado","Registrar un nuevo GDO en catálogo"],["GET","/gdo","ado","Listar GDOs activos"],["GET","/gdo/{id}","ado","Obtener detalle de un GDO por ID"],["PATCH","/gdo/{id}","ado","Actualizar un GDO"],["DELETE","/gdo/{id}","ado","Desactivar lógicamente un GDO"],["POST","/infraccion","jud","Crear una nueva infracción"],["GET","/infraccion","jud","Listar infracciones"],["GET","/infraccion/{id}","jud","Obtener detalle de una infracción por ID"],["PUT","/infraccion/{id}","jud","Actualizar completamente una infraccion (PUT)"],["PATCH","/infraccion/{id}","jud","Actualizar parcialmente una infraccion (PATCH)"],["DELETE","/infraccion/{id}","jud","Desactivar lógicamente una infracción"],["GET","/infraccion/{id}/expedientes","jud","Listar expedientes vinculados a una infracción"],["POST","/medida-socioeducativa","jud","Crear una nueva medida socioeducativa"],["GET","/medida-socioeducativa","jud","Listar medidas socioeducativas"],["GET","/medida-socioeducativa/{id}","jud","Obtener detalle de una medida socioeducativa"],["PUT","/medida-socioeducativa/{id}","jud","Actualizar completamente el tipo de medida (PUT)"],["PATCH","/medida-socioeducativa/{id}","jud","Actualizar parcialmente el tipo de medida (PATCH)"],["DELETE","/medida-socioeducativa/{id}","jud","Desactivar lógicamente una medida socioeducativa"],["GET","/medida-socioeducativa/{id}/expedientes","jud","Listar expedientes vinculados a una medida"],["POST","/adolescente","ado","Registrar un nuevo adolescente"],["GET","/adolescente","ado","Listar todos los adolescentes activos"],["GET","/adolescente/search","ado","Buscar adolescentes activos por coincidencia en nombre, apellido o cédula"],["GET","/adolescente/{id}","ado","Consultar ficha de adolescente por ID"],["PATCH","/adolescente/{id}","ado","Actualizar datos de un adolescente"],["DELETE","/adolescente/{id}","ado","Inactivar adolescente (borrado lógico)"],["POST","/expediente","jud","Aperturar un nuevo expediente judicial"],["GET","/expediente","jud","Listar expedientes judiciales con filtros opcionales"],["GET","/expediente/{id}","jud","Obtener detalle de un expediente con sus medidas socioeducativas"],["PUT","/expediente/{id}","jud","Actualizar completamente los datos de un expediente (PUT)"],["PATCH","/expediente/{id}","jud","Actualizar parcialmente un expediente (PATCH)"],["DELETE","/expediente/{id}","jud","Desactivar lógicamente un expediente judicial"],["POST","/medida-expediente","jud","Asignar una medida socioeducativa a un expediente"],["GET","/medida-expediente","jud","Listar medidas asignadas con filtros opcionales"],["GET","/medida-expediente/{id}","jud","Obtener detalle de una medida asignada"],["PUT","/medida-expediente/{id}","jud","Actualizar completamente la medida socioeducativa (PUT)"],["PATCH","/medida-expediente/{id}","jud","Actualizar seguimiento o estado de una medida asignada"],["DELETE","/medida-expediente/{id}","jud","Desactivar lógicamente una medida asignada"],["POST","/tipo-parentesco","fam","Crear nuevo tipo de parentesco"],["GET","/tipo-parentesco","fam","Listar todos los tipos de parentesco activos"],["GET","/tipo-parentesco/{id}","fam","Obtener un tipo de parentesco por ID"],["PATCH","/tipo-parentesco/{id}","fam","Actualizar tipo de parentesco"],["DELETE","/tipo-parentesco/{id}","fam","Inactivar tipo de parentesco (borrado lógico)"],["POST","/representante","fam","Registrar nuevo representante legal o tutor"],["GET","/representante","fam","Listar todos los representantes activos"],["GET","/representante/{id}","fam","Consultar representante por ID"],["PATCH","/representante/{id}","fam","Actualizar datos de un representante"],["DELETE","/representante/{id}","fam","Inactivar representante (borrado lógico)"],["GET","/representante/cedula/{cedula}","fam","Consultar representante por número de cédula"],["POST","/adolescente-representante","fam","Vincular un representante legal o tutor a un adolescente"],["GET","/adolescente-representante","fam","Listar todos los vínculos de adolescentes y representantes"],["GET","/adolescente-representante/adolescente/{adlc_id}","fam","Listar los representantes legales asociados a un adolescente"],["GET","/adolescente-representante/{id}","fam","Consultar un vínculo por su ID"],["PATCH","/adolescente-representante/{id}","fam","Actualizar un vínculo adolescente-representante"],["DELETE","/adolescente-representante/{id}","fam","Inactivar vínculo adolescente-representante (borrado lógico)"],["POST","/taller","tal","Planificar y registrar un nuevo taller formativo"],["GET","/taller","tal","Listar todos los talleres activos"],["GET","/taller/{id}","tal","Consultar información detallada de un taller por ID"],["PATCH","/taller/{id}","tal","Actualizar información de un taller"],["DELETE","/taller/{id}","tal","Inactivar taller (borrado lógico)"],["POST","/asistencia-taller","tal","Registrar asistencia a taller (valida restricción: adolescente o representante)"],["GET","/asistencia-taller","tal","Listar registros de asistencia activos"],["GET","/asistencia-taller/taller/{tall_id}","tal","Consultar listado de asistencia para un taller específico"],["GET","/asistencia-taller/{id}","tal","Consultar registro de asistencia por ID"],["PATCH","/asistencia-taller/{id}","tal","Actualizar estado de asistencia u observaciones"],["DELETE","/asistencia-taller/{id}","tal","Inactivar registro de asistencia (borrado lógico)"],["POST","/tipo-documento","doc","Registrar un nuevo tipo de documento"],["GET","/tipo-documento","doc","Listar todos los tipos de documento activos"],["GET","/tipo-documento/{id}","doc","Consultar tipo de documento por ID"],["PATCH","/tipo-documento/{id}","doc","Actualizar tipo de documento"],["DELETE","/tipo-documento/{id}","doc","Inactivar tipo de documento (borrado lógico)"],["POST","/documento-expediente","doc","Registrar documento o evidencia en un expediente judicial"],["GET","/documento-expediente","doc","Listar todos los documentos de expedientes activos"],["GET","/documento-expediente/expediente/{expe_id}","doc","Listar documentos vinculados a un expediente específico"],["GET","/documento-expediente/{id}","doc","Consultar documento de expediente por ID"],["PATCH","/documento-expediente/{id}","doc","Actualizar estado de trámite o datos del documento"],["DELETE","/documento-expediente/{id}","doc","Inactivar documento de expediente (borrado lógico)"],["GET","/reportes/uzdi/adolescentes","rep","Consolidado de adolescentes activos por provincia, cantón y sede UZDI"],["GET","/reportes/expedientes/medidas","rep","Resumen procesal de expedientes con infracciones y medidas socioeducativas"],["GET","/reportes/export/excel","rep","Descarga del reporte consolidado en formato Microsoft Excel (.xlsx)"],["GET","/reportes/export/pdf","rep","Descarga de la ficha ejecutiva institucional en formato binario PDF"]];
-
-  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const normalizar = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-
-  function pintarModulos() {
-    const cuenta = {};
-    ENDPOINTS.forEach(([, , m]) => { cuenta[m] = (cuenta[m] || 0) + 1; });
-    document.getElementById('modulos-lista').innerHTML = Object.entries(MODULOS).map(([k, m]) => `
-      <article class="modulo">
-        <div class="modulo-media"><span class="mono">${esc(m.esquema)}</span><b>${cuenta[k] || 0}</b><em>endpoints</em></div>
-        <h3>${esc(m.nombre)}</h3>
-        <p>${esc(m.texto)}</p>
-        <div class="tablas mono">${esc(m.tablas)}</div>
-        <a class="boton boton-contorno" href="${API}/api/docs#/${encodeURIComponent(m.tag)}">Ver en Swagger</a>
-      </article>`).join('');
-    document.getElementById('cifra-endpoints').textContent = ENDPOINTS.length;
-  }
-
   const lista = document.getElementById('endpoints-lista');
   const conteo = document.getElementById('conteo-endpoints');
-  const verMas = document.getElementById('ver-mas');
   const input = document.getElementById('q');
-  const atajos = [...document.querySelectorAll('#atajos .etiqueta')];
   const filtrosMetodo = [...document.querySelectorAll('[data-metodo]')];
   let metodo = '';
-  let todos = false;
-
   function pintarEndpoints() {
     const f = normalizar(input.value.trim());
-    const res = ENDPOINTS.filter(([m, p, mod, s]) =>
-      (!metodo || m === metodo) && (!f || normalizar(`${p} ${s} ${MODULOS[mod]?.nombre || ''}`).includes(f)));
-    const visibles = todos || f ? res : res.slice(0, 12);
-    lista.innerHTML = visibles.length ? visibles.map(([m, p, mod, s]) => `
-      <div class="ep"><span class="metodo ${m}">${m}</span><span class="ruta">${esc(p || '/')}</span><span class="resumen">${esc(s)}</span><span class="mod">${esc(MODULOS[mod]?.nombre || '')}</span></div>`).join('')
-      : `<div class="vacio">Ningún endpoint coincide con “${esc(input.value.trim())}”. Prueba con otra palabra, como expediente o usuario.</div>`;
-    conteo.textContent = `Mostrando ${visibles.length} de ${res.length} endpoints`;
-    verMas.hidden = todos || !!f || res.length <= 12;
+    const res = ENDPOINTS.filter(([m, p, , s]) => (!metodo || m === metodo) && (!f || normalizar(`${p} ${s}`).includes(f)));
+    lista.innerHTML = res.length ? res.map(([m, p, , s]) => `<div class="ep"><span class="metodo ${m}">${m}</span><span class="ruta">${esc(p || '/')}</span><span class="resumen">${esc(s)}</span></div>`).join('')
+      : `<div class="vacio">Ningún endpoint coincide con “${esc(input.value.trim())}”.</div>`;
+    conteo.textContent = `${res.length} de ${ENDPOINTS.length}`;
+    document.getElementById('cifra-endpoints').textContent = ENDPOINTS.length;
+    document.getElementById('total-endpoints').textContent = `${ENDPOINTS.length} endpoints en Swagger`;
   }
-  function marcarAtajo(v) { atajos.forEach((b) => b.setAttribute('aria-pressed', String(b.textContent === v))); }
-
-  verMas.addEventListener('click', () => { todos = true; pintarEndpoints(); });
-  input.addEventListener('input', () => { marcarAtajo(input.value.trim()); pintarEndpoints(); });
-  document.getElementById('buscador').addEventListener('submit', (e) => {
-    e.preventDefault(); pintarEndpoints(); document.getElementById('endpoints').scrollIntoView();
-  });
-  atajos.forEach((b) => b.addEventListener('click', () => {
-    input.value = b.textContent; marcarAtajo(b.textContent); pintarEndpoints();
-    document.getElementById('endpoints').scrollIntoView();
-  }));
+  input.addEventListener('input', pintarEndpoints);
   filtrosMetodo.forEach((b) => b.addEventListener('click', () => {
     metodo = b.dataset.metodo; filtrosMetodo.forEach((x) => x.setAttribute('aria-pressed', String(x === b))); pintarEndpoints();
   }));
-
-  document.getElementById('barras').innerHTML = PERFILES.map(([c, n, v]) => `
-    <div class="barra"><div><span><strong>${c}</strong> <small>${esc(n)}</small></span><span>${v} de 108</span></div><i style="--p:${Math.round(v / 108 * 100)}%"></i></div>`).join('');
-
-  document.getElementById('equipo-lista').innerHTML = EQUIPO.map((p) => `
-    <div class="persona"><h3>${esc(p.nombre)}</h3><p>${esc(p.area)}</p></div>`).join('');
-
-  pintarModulos();
   pintarEndpoints();
 
-  // Datos en vivo desde el backend
+  // ---------- Datos en vivo desde el backend ----------
   const estado = document.getElementById('estado');
   fetch(API + '/api/v1', { headers: { Accept: 'application/json' } })
     .then((r) => (r.ok ? r.json() : Promise.reject()))
@@ -632,17 +946,15 @@ npm run start:dev</pre>
     .then((doc) => {
       const vivos = [];
       for (const [ruta, ops] of Object.entries(doc.paths || {})) {
-        for (const [m, op] of Object.entries(ops)) {
-          const mod = TAG_A_MODULO[(op.tags || [])[0]] || moduloPorRuta(ruta);
-          if (mod) vivos.push([m.toUpperCase(), ruta.replace(/^\/api\/v1/, ''), mod, op.summary || '']);
-        }
+        const r = ruta.replace(/^\/api\/v1/, '');
+        for (const [m, op] of Object.entries(ops)) vivos.push([m.toUpperCase(), r || '/', RUTA_A_MODULO[r.replace(/^\//, '').split('/')[0]] || 'seg', op.summary || '']);
       }
       if (!vivos.length) return;
       ENDPOINTS = vivos;
       document.getElementById('origen-endpoints').textContent = 'Lista en vivo desde el Swagger del backend conectado.';
-      pintarModulos(); pintarEndpoints();
+      pintarEndpoints();
     })
-    .catch(() => { document.getElementById('origen-endpoints').textContent = 'Copia del Swagger del backend (la API no está conectada ahora).'; });
+    .catch(() => { document.getElementById('origen-endpoints').textContent = 'Copia del Swagger del backend (la API no responde ahora).'; });
 </script>
 </body>
 </html>
